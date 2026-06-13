@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import itertools
 import os
 from collections.abc import Iterator
 from typing import Protocol, TypeVar
@@ -38,7 +39,17 @@ class HierarchyNode[T]:
 
     async def load(path: PathLike) -> HierarchyNode[T]:
         """Load the hierarchy from a file."""
-        return HierarchyNode(**orjson.loads(await anyio.Path(path).read_bytes()))
+        data = orjson.loads(await anyio.Path(path).read_bytes())
+        return HierarchyNode._from_dict(data)
+
+    @staticmethod
+    def _from_dict(data: dict) -> HierarchyNode:
+        """Recursively reconstruct a HierarchyNode from a plain dict."""
+        return HierarchyNode(
+            name=data["name"],
+            children=[HierarchyNode._from_dict(c) for c in data.get("children", [])],
+            examples=data.get("examples", []),
+        )
 
 
 @attrs.define(order=True)
@@ -46,8 +57,8 @@ class TraversedNode[T]:
     """A node that has been traversed during classification."""
 
     cost: float
-    node: HierarchyNode[T]
-    path: list[HierarchyNode[T]] = attrs.field(factory=list)
+    node: HierarchyNode[T] = attrs.field(order=False)
+    path: list[HierarchyNode[T]] = attrs.field(factory=list, order=False)
 
 
 @attrs.define
@@ -79,7 +90,7 @@ class NodeClassifier(Protocol[T]):
         if not np.any(finite_mask):
             return iter(())
         valid_scores = node.cost - np.log(probabilities[finite_mask])
-        valid_children = filter(finite_mask.__getitem__, node.node.children)
+        valid_children = itertools.compress(node.node.children, finite_mask)
         return (
             ScoredNode(node=child_node, cumulative_cost=score)
             for child_node, score in zip(valid_children, valid_scores)

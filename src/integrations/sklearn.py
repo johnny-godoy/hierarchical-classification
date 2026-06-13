@@ -29,13 +29,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
-from src.models import HierarchyNode
+from src.models import HierarchyNode, NodeClassifier
 
 if TYPE_CHECKING:
     from sklearn.base import ClassifierMixin
 
 
-class SklearnNodeClassifier:
+class SklearnNodeClassifier(NodeClassifier):
     """Wraps any sklearn-compatible classifier as a :class:`~src.models.NodeClassifier`.
 
     The wrapped classifier must expose ``predict_proba`` and a ``classes_``

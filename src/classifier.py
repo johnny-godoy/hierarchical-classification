@@ -26,7 +26,7 @@ class HierarchicalClassifier:
                 if current_node.cost < best_cost:
                     best_cost = current_node.cost
                     best_leaf = current_node.node
-                    continue
+                continue
             for scored_node in self.classifier.neg_log_proba(
                 utterance,
                 current_node,

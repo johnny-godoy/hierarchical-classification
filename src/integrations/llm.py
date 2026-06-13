@@ -23,7 +23,7 @@ from __future__ import annotations
 import numpy as np
 import numpy.typing as npt
 
-from src.models import HierarchyNode
+from src.models import HierarchyNode, NodeClassifier
 
 _DEFAULT_MODEL = "gpt-4o-mini"
 
@@ -34,7 +34,7 @@ _SYSTEM_PROMPT = (
 )
 
 
-class LLMNodeClassifier:
+class LLMNodeClassifier(NodeClassifier):
     """LLM-backed node classifier using litellm.
 
     The LLM is asked to pick the single best-matching child label for the

@@ -21,12 +21,12 @@ from __future__ import annotations
 import numpy as np
 import numpy.typing as npt
 
-from src.models import HierarchyNode
+from src.models import HierarchyNode, NodeClassifier
 
 _DEFAULT_MODEL = "facebook/bart-large-mnli"
 
 
-class HuggingFaceZeroShotClassifier:
+class HuggingFaceZeroShotClassifier(NodeClassifier):
     """Zero-shot node classifier backed by a HuggingFace ``transformers`` pipeline.
 
     The pipeline is instantiated lazily on the first call so that importing
