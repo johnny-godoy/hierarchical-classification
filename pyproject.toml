@@ -10,3 +10,8 @@ dependencies = [
     "numpy>=2.4.4",
     "orjson>=3.11.8",
 ]
+
+[project.optional-dependencies]
+sklearn = ["scikit-learn>=1.0"]
+huggingface = ["transformers>=4.0"]
+llm = ["litellm>=1.0"]
