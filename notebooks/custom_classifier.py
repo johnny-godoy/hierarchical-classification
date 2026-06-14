@@ -13,21 +13,23 @@ def _():
 
 @app.cell
 def _():
-    import os
     import sys
+    from pathlib import Path
 
     def _find_project_root() -> None:
         """Add the project root (the directory containing ``src/``) to sys.path."""
-        cwd = os.getcwd()
-        for candidate in [cwd, os.path.dirname(cwd)]:
-            if os.path.isdir(os.path.join(candidate, "src")):
-                if candidate not in sys.path:
-                    sys.path.insert(0, candidate)
+        cwd = Path.cwd()
+        for candidate in [cwd, cwd.parent]:
+            if (candidate / "src").is_dir():
+                candidate_str = str(candidate)
+                if candidate_str not in sys.path:
+                    sys.path.insert(0, candidate_str)
                 return
 
     _find_project_root()
 
     import numpy as np
+
     from src.classifier import HierarchicalClassifier
     from src.models import HierarchyNode
 
@@ -123,8 +125,8 @@ def _(hierarchy, mo):
             lines.extend(_tree_md(child, depth + 1))
         return lines
 
-    _tree = "\n\n".join(_tree_md(hierarchy))
-    mo.accordion({"🗂️ Show hierarchy tree": mo.md(_tree)})
+    tree = "\n\n".join(_tree_md(hierarchy))
+    mo.accordion({"🗂️ Show hierarchy tree": mo.md(tree)})
     return
 
 
@@ -155,14 +157,25 @@ def _(mo):
 
 @app.cell
 def _(np):
-    from src.models import HierarchyNode as _HN, NodeClassifier as _NC
+    from src.models import HierarchyNode as HierarchyNodeModel
+    from src.models import NodeClassifier as NodeClassifierModel
 
-    KEYWORDS: dict[str, list[str]] = {
+    keywords: dict[str, list[str]] = {
         # Leaf nodes
         "Football": ["football", "soccer", "goal", "match", "striker", "penalty", "pitch", "referee", "offside"],
         "Basketball": ["basketball", "nba", "hoop", "dunk", "three-pointer", "court", "rebound", "layup"],
         "Tennis": ["tennis", "serve", "ace", "wimbledon", "racket", "grand slam", "rally", "forehand"],
-        "Artificial Intelligence": ["ai", "machine learning", "neural", "llm", "gpt", "model", "deep learning", "training", "dataset"],
+        "Artificial Intelligence": [
+            "ai",
+            "machine learning",
+            "neural",
+            "llm",
+            "gpt",
+            "model",
+            "deep learning",
+            "training",
+            "dataset",
+        ],
         "Programming": ["code", "python", "software", "developer", "api", "bug", "framework", "github", "pull request"],
         "Hardware": ["cpu", "gpu", "chip", "processor", "motherboard", "ram", "server", "ssd", "bandwidth"],
         "Nutrition": ["diet", "vitamins", "protein", "calories", "food", "nutrients", "eating", "weight", "meal"],
@@ -174,7 +187,7 @@ def _(np):
         "Health": ["health", "medical", "wellness", "body", "disease", "doctor", "clinic", "patient", "treatment"],
     }
 
-    class KeywordNodeClassifier(_NC):
+    class KeywordNodeClassifier(NodeClassifierModel):
         """
         A keyword-based :class:`~src.models.NodeClassifier` for demonstration purposes.
 
@@ -187,28 +200,22 @@ def _(np):
         with a small smoothing term so that no child is completely excluded.
         """
 
-        def predict_proba(self, utterance: str, node: _HN) -> np.ndarray:
+        def predict_proba(self, utterance: str, node: HierarchyNodeModel) -> np.ndarray:  # noqa: PLR6301
             text = utterance.lower()
             scores = np.array(
-                [
-                    sum(1.0 for kw in KEYWORDS.get(child.name, []) if kw in text) + 0.1
-                    for child in node.children
-                ],
+                [sum(1.0 for kw in keywords.get(child.name, []) if kw in text) + 0.1 for child in node.children],
                 dtype=np.float32,
             )
             return scores / scores.sum()
 
-    return KEYWORDS, KeywordNodeClassifier
+    return keywords, KeywordNodeClassifier
 
 
 @app.cell
-def _(KEYWORDS: dict[str, list[str]], mo):
-    _rows = [
-        {"Category": cat, "Keywords": ", ".join(kws)}
-        for cat, kws in KEYWORDS.items()
-    ]
+def _(keywords: dict[str, list[str]], mo):
+    rows = [{"Category": cat, "Keywords": ", ".join(kws)} for cat, kws in keywords.items()]
     mo.accordion(
-        {"🔑 Show keyword dictionary": mo.ui.table(_rows, selection=None)}
+        {"🔑 Show keyword dictionary": mo.ui.table(rows, selection=None)},
     )
     return
 
@@ -240,23 +247,20 @@ def _(mo):
         value="AI article",
         label="Pick a preset example",
     )
-    preset_picker
     return (preset_picker,)
 
 
 @app.cell
 def _(mo, preset_picker):
-    _initial = (
-        preset_picker.value
-        or "The new transformer model achieves state-of-the-art results on language benchmarks."
+    initial = (
+        preset_picker.value or "The new transformer model achieves state-of-the-art results on language benchmarks."
     )
     utterance_input = mo.ui.text_area(
-        value=_initial,
+        value=initial,
         label="✏️ Text to classify",
         full_width=True,
         rows=3,
     )
-    utterance_input
     return (utterance_input,)
 
 
@@ -268,15 +272,15 @@ def _(
     mo,
     utterance_input,
 ):
-    _text = utterance_input.value.strip()
-    if _text:
-        _clf = HierarchicalClassifier.from_classifier(
+    text = utterance_input.value.strip()
+    if text:
+        clf = HierarchicalClassifier.from_classifier(
             node_classifier=KeywordNodeClassifier(),
             hierarchy=hierarchy,
         )
-        _result = _clf.classify(_text)
+        result = clf.classify(text)
         mo.callout(
-            mo.md(f"🏷️  **Predicted category:** {_result}"),
+            mo.md(f"🏷️  **Predicted category:** {result}"),
             kind="success",
         )
     else:
@@ -297,26 +301,26 @@ def _(mo):
 
 @app.cell
 def _(KEYWORDS: dict[str, list[str]], hierarchy, mo, np, utterance_input):
-    _text = utterance_input.value.strip().lower()
+    text = utterance_input.value.strip().lower()
 
     def _score(node_name: str) -> float:
         kws = KEYWORDS.get(node_name, [])
-        return sum(1.0 for kw in kws if kw in _text) + 0.1
+        return sum(1.0 for kw in kws if kw in text) + 0.1
 
     rows = []
     for _level_node in [hierarchy, *hierarchy.children]:
         if not _level_node.children:
             continue
-        _raw = np.array([_score(c.name) for c in _level_node.children], dtype=np.float32)
-        _proba = _raw / _raw.sum()
-        for _child, _p in zip(_level_node.children, _proba):
+        raw = np.array([_score(c.name) for c in _level_node.children], dtype=np.float32)
+        proba = raw / raw.sum()
+        for _child, _p in zip(_level_node.children, proba, strict=True):
             rows.append(
                 {
                     "Parent": _level_node.name,
                     "Category": _child.name,
                     "Probability": f"{_p:.3f}",
                     "Relative weight": "█" * max(1, round(_p * 20)),
-                }
+                },
             )
 
     mo.ui.table(rows, selection=None)

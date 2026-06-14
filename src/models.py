@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import functools
-from typing import Protocol, TypeVar
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import attrs
-import numpy as np
-import numpy.typing as npt
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    import numpy as np
+    import numpy.typing as npt
 
 T = TypeVar("T")
 
@@ -26,11 +30,23 @@ class HierarchyNode[T]:
         return not self.children
 
     @staticmethod
-    def _from_dict(data: dict) -> HierarchyNode:
-        """Recursively reconstruct a HierarchyNode from a plain dict."""
+    def from__dict(data: Mapping) -> HierarchyNode:
+        """Recursively reconstruct a HierarchyNode from a plain dict.
+
+        Parameters
+        ----------
+        data: dict
+            A dictionary with keys "name", "children", and "examples" representing
+            a hierarchy node. The "children" key should be a list of similar
+            dictionaries for child nodes.
+
+        Returns
+        -------
+            A HierarchyNode instance reconstructed from the input dictionary.
+        """
         return HierarchyNode(
             name=data["name"],
-            children=[HierarchyNode._from_dict(c) for c in data.get("children", [])],
+            children=[HierarchyNode.from__dict(c) for c in data.get("children", [])],
             examples=data.get("examples", []),
         )
 

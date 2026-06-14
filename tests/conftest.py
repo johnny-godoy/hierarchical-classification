@@ -1,7 +1,5 @@
 """Shared pytest fixtures for all tests."""
 
-from __future__ import annotations
-
 import numpy as np
 import numpy.typing as npt
 import pytest
@@ -13,16 +11,16 @@ from src.models import HierarchyNode, NodeClassifier
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def leaf_node() -> HierarchyNode:
-    """A single leaf node with no children."""
+    """Return single leaf node with no children."""
     return HierarchyNode(name="leaf")
 
 
-@pytest.fixture()
+@pytest.fixture
 def flat_hierarchy() -> HierarchyNode:
     """Root → {cat, dog, bird} (all leaves)."""
-    root = HierarchyNode(
+    return HierarchyNode(
         name="root",
         children=[
             HierarchyNode(name="cat"),
@@ -30,10 +28,9 @@ def flat_hierarchy() -> HierarchyNode:
             HierarchyNode(name="bird"),
         ],
     )
-    return root
 
 
-@pytest.fixture()
+@pytest.fixture
 def deep_hierarchy() -> HierarchyNode:
     """Two-level hierarchy: root → {animal, vehicle} → leaves."""
     animal = HierarchyNode(
@@ -58,7 +55,11 @@ class DeterministicClassifier(NodeClassifier):
     def __init__(self, target_index: int = 0) -> None:
         self._target_index = target_index
 
-    def predict_proba(self, utterance: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
+    def predict_proba(
+        self,
+        utterance: str,
+        node: HierarchyNode,
+    ) -> npt.NDArray[np.float32]:
         n = len(node.children)
         proba = np.zeros(n, dtype=np.float32)
         if n:
@@ -66,7 +67,7 @@ class DeterministicClassifier(NodeClassifier):
         return proba
 
 
-@pytest.fixture()
+@pytest.fixture
 def first_child_classifier() -> DeterministicClassifier:
-    """Always picks the first child with probability 1.0."""
+    """Pick the first child with probability 1.0."""
     return DeterministicClassifier(target_index=0)

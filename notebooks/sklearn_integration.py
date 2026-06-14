@@ -13,21 +13,21 @@ def _():
 
 @app.cell
 def _():
-    import os
     import sys
+    from pathlib import Path
 
     def _find_project_root() -> None:
         """Add the project root (the directory containing ``src/``) to sys.path."""
-        cwd = os.getcwd()
-        for candidate in [cwd, os.path.dirname(cwd)]:
-            if os.path.isdir(os.path.join(candidate, "src")):
-                if candidate not in sys.path:
-                    sys.path.insert(0, candidate)
+        cwd = Path.cwd()
+        for candidate in [cwd, cwd.parent]:
+            if (candidate / "src").is_dir():
+                candidate_str = str(candidate)
+                if candidate_str not in sys.path:
+                    sys.path.insert(0, candidate_str)
                 return
 
     _find_project_root()
 
-    import numpy as np
     from src.classifier import HierarchicalClassifier
     from src.integrations.sklearn import SklearnNodeClassifier
     from src.models import HierarchyNode
@@ -87,7 +87,7 @@ def _(mo):
 
 @app.cell
 def _():
-    TRAINING_DATA: list[tuple[str, str]] = [
+    training_data: list[tuple[str, str]] = [
         # ── Top-level: Sports ──────────────────────────────────────────────
         ("This week's top sports headlines from around the world.", "Sports"),
         ("Athletes from 50 nations compete in the championship.", "Sports"),
@@ -158,19 +158,20 @@ def _():
         ("New apps are making mental health support more accessible.", "Mental Health"),
         ("Cognitive behavioural therapy is an evidence-based treatment for depression.", "Mental Health"),
     ]
-    X_train = [text for text, _ in TRAINING_DATA]
-    y_train = [label for _, label in TRAINING_DATA]
-    return TRAINING_DATA, X_train, y_train
+    x_train = [text for text, _ in training_data]
+    y_train = [label for _, label in training_data]
+    return training_data, x_train, y_train
 
 
 @app.cell
-def _(TRAINING_DATA: list[tuple[str, str]], mo):
-    _rows = [
-        {"Text": text[:80] + ("…" if len(text) > 80 else ""), "Category": label}
-        for text, label in TRAINING_DATA
+def _(training_data: list[tuple[str, str]], mo):
+    max_len = 80
+    rows = [
+        {"Text": text[:max_len] + ("…" if len(text) > max_len else ""), "Category": label}
+        for text, label in training_data
     ]
     mo.accordion(
-        {"📋 Show training examples": mo.ui.table(_rows, selection=None)}
+        {"📋 Show training examples": mo.ui.table(rows, selection=None)},
     )
     return
 
@@ -233,7 +234,6 @@ def _(mo):
         label="Logistic Regression C (regularisation strength)",
         show_value=True,
     )
-    regularisation
     return (regularisation,)
 
 
@@ -254,7 +254,7 @@ def _(SklearnNodeClassifier, X_train, mo, regularisation, y_train):
                     random_state=42,
                 ),
             ),
-        ]
+        ],
     )
     pipeline.fit(X_train, y_train)
     node_clf = SklearnNodeClassifier(pipeline)
@@ -262,7 +262,7 @@ def _(SklearnNodeClassifier, X_train, mo, regularisation, y_train):
     mo.callout(
         mo.md(
             f"✅ Pipeline trained with **C = {regularisation.value:.2f}** "
-            f"on {len(X_train)} examples across {len(set(y_train))} categories."
+            f"on {len(X_train)} examples across {len(set(y_train))} categories.",
         ),
         kind="success",
     )
@@ -297,34 +297,29 @@ def _(mo):
         value="GPU news",
         label="Pick a preset example",
     )
-    preset_picker
     return (preset_picker,)
 
 
 @app.cell
 def _(mo, preset_picker):
-    _initial = (
-        preset_picker.value
-        or "The latest GPU from NVIDIA sets a new record for compute performance."
-    )
+    initial = preset_picker.value or "The latest GPU from NVIDIA sets a new record for compute performance."
     utterance_input = mo.ui.text_area(
-        value=_initial,
+        value=initial,
         label="✏️ Text to classify",
         full_width=True,
         rows=3,
     )
-    utterance_input
     return (utterance_input,)
 
 
 @app.cell
 def _(HierarchicalClassifier, hierarchy, mo, node_clf, utterance_input):
-    _text = utterance_input.value.strip()
-    if _text:
-        _clf = HierarchicalClassifier.from_classifier(node_classifier=node_clf, hierarchy=hierarchy)
-        _result = _clf.classify(_text)
+    text = utterance_input.value.strip()
+    if text:
+        clf = HierarchicalClassifier.from_classifier(node_classifier=node_clf, hierarchy=hierarchy)
+        result = clf.classify(text)
         mo.callout(
-            mo.md(f"🏷️  **Predicted category:** {_result}"),
+            mo.md(f"🏷️  **Predicted category:** {result}"),
             kind="success",
         )
     else:
@@ -346,27 +341,27 @@ def _(mo):
 
 @app.cell
 def _(hierarchy, mo, pipeline, utterance_input):
-    _text = utterance_input.value.strip()
-    if not _text:
+    text = utterance_input.value.strip()
+    if not text:
         mo.callout(mo.md("_Enter text above to see probabilities._"), kind="warn")
     else:
-        _all_proba = pipeline.predict_proba([_text])[0]
-        _class_to_prob: dict[str, float] = dict(zip(pipeline.classes_, _all_proba))
+        all_proba = pipeline.predict_proba([text])[0]
+        class_to_prob: dict[str, float] = dict(zip(pipeline.classes_, all_proba, strict=True))
 
-        _rows = []
+        rows = []
         for _top in hierarchy.children:
             for _leaf in _top.children:
-                _p = _class_to_prob.get(_leaf.name, 0.0)
-                _rows.append(
+                p = class_to_prob.get(_leaf.name, 0.0)
+                rows.append(
                     {
                         "Top-level": _top.name,
                         "Leaf category": _leaf.name,
-                        "Probability": f"{_p:.4f}",
-                        "Relative weight": "█" * max(1, round(_p * 30)),
-                    }
+                        "Probability": f"{p:.4f}",
+                        "Relative weight": "█" * max(1, round(p * 30)),
+                    },
                 )
-        _rows.sort(key=lambda r: float(r["Probability"]), reverse=True)
-        mo.ui.table(_rows, selection=None)
+        rows.sort(key=lambda r: float(r["Probability"]), reverse=True)
+        mo.ui.table(rows, selection=None)
     return
 
 
@@ -389,7 +384,6 @@ def _(mo):
         value="Logistic Regression",
         label="Underlying classifier",
     )
-    model_choice
     return (model_choice,)
 
 
@@ -397,36 +391,35 @@ def _(mo):
 def _(
     SklearnNodeClassifier,
     TfidfVectorizer,
-    X_train,
+    x_train,
     mo,
     model_choice,
     regularisation,
     y_train,
 ):
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.naive_bayes import MultinomialNB
     from sklearn.pipeline import Pipeline as _Pipeline
 
     if model_choice.value == "Logistic Regression":
-        from sklearn.linear_model import LogisticRegression as _LR
-
-        _estimator = _LR(C=regularisation.value, max_iter=500, random_state=42)
+        estimator = LogisticRegression(C=regularisation.value, max_iter=500, random_state=42)
     elif model_choice.value == "Random Forest":
-        _estimator = RandomForestClassifier(n_estimators=100, random_state=42)
+        estimator = RandomForestClassifier(n_estimators=100, random_state=42)
     else:
-        _estimator = MultinomialNB()
+        estimator = MultinomialNB()
 
-    _alt_pipeline = _Pipeline(
+    alt_pipeline = _Pipeline(
         [
             ("tfidf", TfidfVectorizer(ngram_range=(1, 2), min_df=1)),
-            ("clf", _estimator),
-        ]
+            ("clf", estimator),
+        ],
     )
-    _alt_pipeline.fit(X_train, y_train)
-    alt_node_clf = SklearnNodeClassifier(_alt_pipeline)
+    alt_pipeline.fit(x_train, y_train)
+    alt_node_clf = SklearnNodeClassifier(alt_pipeline)
 
     mo.callout(
-        mo.md(f"✅ **{model_choice.value}** pipeline trained on {len(X_train)} examples."),
+        mo.md(f"✅ **{model_choice.value}** pipeline trained on {len(x_train)} examples."),
         kind="success",
     )
     return (alt_node_clf,)
@@ -434,12 +427,12 @@ def _(
 
 @app.cell
 def _(HierarchicalClassifier, alt_node_clf, hierarchy, mo, utterance_input):
-    _text = utterance_input.value.strip()
-    if _text:
-        _clf = HierarchicalClassifier.from_classifier(node_classifier=alt_node_clf, hierarchy=hierarchy)
-        _result = _clf.classify(_text)
+    text = utterance_input.value.strip()
+    if text:
+        clf = HierarchicalClassifier.from_classifier(node_classifier=alt_node_clf, hierarchy=hierarchy)
+        result = clf.classify(text)
         mo.callout(
-            mo.md(f"🏷️  **Alternative model prediction:** {_result}"),
+            mo.md(f"🏷️  **Alternative model prediction:** {result}"),
             kind="info",
         )
     else:

@@ -14,12 +14,12 @@ class _FakeSklearnClf:
         self.classes_ = np.array(classes_)
         self._proba_map = proba_map
 
-    def predict_proba(self, X):
+    def predict_proba(self, _: str) -> np.ndarray:
         row = [self._proba_map.get(c, 0.0) for c in self.classes_]
         return np.array([row])
 
 
-@pytest.fixture()
+@pytest.fixture
 def node_with_cat_dog() -> HierarchyNode:
     return HierarchyNode(
         name="root",
@@ -27,19 +27,29 @@ def node_with_cat_dog() -> HierarchyNode:
     )
 
 
-@pytest.fixture()
-def sklearn_clf_cat_dog(node_with_cat_dog) -> SklearnNodeClassifier:
+@pytest.fixture
+def sklearn_clf_cat_dog(
+    node_with_cat_dog: HierarchyNode,  # noqa: ARG001
+) -> SklearnNodeClassifier:
     inner = _FakeSklearnClf(["cat", "dog"], {"cat": 0.7, "dog": 0.3})
     return SklearnNodeClassifier(inner)
 
 
 class TestSklearnNodeClassifier:
-    def test_returns_correct_probabilities(self, sklearn_clf_cat_dog, node_with_cat_dog) -> None:
+    def test_returns_correct_probabilities(
+        self,
+        sklearn_clf_cat_dog: SklearnNodeClassifier,
+        node_with_cat_dog: HierarchyNode,
+    ) -> None:
         proba = sklearn_clf_cat_dog.predict_proba("a cat", node_with_cat_dog)
         assert proba.dtype == np.float32
         np.testing.assert_allclose(proba, [0.7, 0.3], atol=1e-6)
 
-    def test_length_matches_children(self, sklearn_clf_cat_dog, node_with_cat_dog) -> None:
+    def test_length_matches_children(
+        self,
+        sklearn_clf_cat_dog: SklearnNodeClassifier,
+        node_with_cat_dog: HierarchyNode,
+    ) -> None:
         proba = sklearn_clf_cat_dog.predict_proba("test", node_with_cat_dog)
         assert len(proba) == len(node_with_cat_dog.children)
 
@@ -55,7 +65,11 @@ class TestSklearnNodeClassifier:
         assert proba[0] == pytest.approx(0.0)  # unknown_class → 0
         assert proba[1] == pytest.approx(0.8)  # cat → 0.8
 
-    def test_probabilities_are_float32(self, sklearn_clf_cat_dog, node_with_cat_dog) -> None:
+    def test_probabilities_are_float32(
+        self,
+        sklearn_clf_cat_dog: SklearnNodeClassifier,
+        node_with_cat_dog: HierarchyNode,
+    ) -> None:
         proba = sklearn_clf_cat_dog.predict_proba("x", node_with_cat_dog)
         assert proba.dtype == np.float32
 

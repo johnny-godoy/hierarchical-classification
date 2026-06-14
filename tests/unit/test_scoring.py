@@ -27,7 +27,7 @@ class TestNegLogScoringStrategy:
 
     def test_all_zero_proba_returns_empty(self, flat_hierarchy: HierarchyNode) -> None:
         class ZeroClassifier(NodeClassifier):
-            def predict_proba(self, utterance, node):
+            def predict_proba(self, _: str, node: HierarchyNode) -> np.ndarray:
                 return np.zeros(len(node.children), dtype=np.float32)
 
         clf = NegLogScoringStrategy(ZeroClassifier())
@@ -36,7 +36,7 @@ class TestNegLogScoringStrategy:
 
     def test_partial_positive_proba(self, flat_hierarchy: HierarchyNode) -> None:
         class PartialClassifier(NodeClassifier):
-            def predict_proba(self, utterance, node):
+            def predict_proba(self, _: str, __: HierarchyNode) -> np.ndarray:
                 return np.array([0.5, 0.5, 0.0], dtype=np.float32)
 
         clf = NegLogScoringStrategy(PartialClassifier())

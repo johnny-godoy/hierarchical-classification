@@ -10,7 +10,11 @@ from tests.conftest import DeterministicClassifier
 
 
 class TestHierarchicalClassifierClassify:
-    def test_flat_hierarchy_picks_first_child(self, flat_hierarchy: HierarchyNode, first_child_classifier) -> None:
+    def test_flat_hierarchy_picks_first_child(
+        self,
+        flat_hierarchy: HierarchyNode,
+        first_child_classifier: NodeClassifier,
+    ) -> None:
         hc = HierarchicalClassifier.from_classifier(first_child_classifier, flat_hierarchy)
         result = hc.classify("any text")
         assert result == "cat"
@@ -27,7 +31,11 @@ class TestHierarchicalClassifierClassify:
         result = hc.classify("any text")
         assert result == "bird"
 
-    def test_deep_hierarchy_traverses_to_leaf(self, deep_hierarchy: HierarchyNode, first_child_classifier) -> None:
+    def test_deep_hierarchy_traverses_to_leaf(
+        self,
+        deep_hierarchy: HierarchyNode,
+        first_child_classifier: NodeClassifier,
+    ) -> None:
         # first child of root = "animal", first child of "animal" = "cat"
         hc = HierarchicalClassifier.from_classifier(first_child_classifier, deep_hierarchy)
         result = hc.classify("meow")
@@ -36,7 +44,7 @@ class TestHierarchicalClassifierClassify:
     def test_deep_hierarchy_second_branch(self, deep_hierarchy: HierarchyNode) -> None:
         # always picks last child: root's last = "vehicle", vehicle's last = "bike"
         class LastChildClassifier(NodeClassifier):
-            def predict_proba(self, utterance: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
+            def predict_proba(self, _: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
                 n = len(node.children)
                 proba = np.zeros(n, dtype=np.float32)
                 if n:
@@ -51,7 +59,7 @@ class TestHierarchicalClassifierClassify:
         root = HierarchyNode(name="root", children=[HierarchyNode(name="child")])
 
         class NeverClassifier(NodeClassifier):
-            def predict_proba(self, utterance: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
+            def predict_proba(self, _: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
                 return np.zeros(len(node.children), dtype=np.float32)
 
         hc = HierarchicalClassifier.from_classifier(NeverClassifier(), root)
@@ -86,7 +94,7 @@ class TestHierarchicalClassifierClassify:
         """Classifier that routes animal→cat with high prob but vehicle→car with low prob."""
 
         class WeightedClassifier(NodeClassifier):
-            def predict_proba(self, utterance: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
+            def predict_proba(self, _: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
                 child_names = [c.name for c in node.children]
                 if node.name == "root":
                     # strongly prefer animal

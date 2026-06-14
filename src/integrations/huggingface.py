@@ -12,7 +12,7 @@ Example::
 
     from src.integrations.huggingface import HuggingFaceZeroShotClassifier
 
-    clf = HuggingFaceZeroShotClassifier()          # uses facebook/bart-large-mnli
+    clf = HuggingFaceZeroShotClassifier()  # uses facebook/bart-large-mnli
     clf = HuggingFaceZeroShotClassifier("cross-encoder/nli-deberta-v3-small")
 """
 
@@ -21,7 +21,7 @@ import numpy.typing as npt
 
 from src.models import HierarchyNode, NodeClassifier
 
-_DEFAULT_MODEL = "facebook/bart-large-mnli"
+DEFAULT_MODEL = "facebook/bart-large-mnli"
 
 
 class HuggingFaceZeroShotClassifier(NodeClassifier):
@@ -37,14 +37,14 @@ class HuggingFaceZeroShotClassifier(NodeClassifier):
             ``transformers.pipeline``.
     """
 
-    def __init__(self, model: str = _DEFAULT_MODEL, **pipeline_kwargs: object) -> None:
+    def __init__(self, model: str = DEFAULT_MODEL, **pipeline_kwargs: object) -> None:
         self._model = model
         self._pipeline_kwargs = pipeline_kwargs
         self._pipe = None
 
     def _get_pipe(self) -> object:
         if self._pipe is None:
-            from transformers import pipeline  # type: ignore[import-untyped]
+            from transformers import pipeline  # type: ignore[import-untyped]  # noqa: PLC0415
 
             self._pipe = pipeline("zero-shot-classification", model=self._model, **self._pipeline_kwargs)
         return self._pipe
@@ -56,11 +56,12 @@ class HuggingFaceZeroShotClassifier(NodeClassifier):
             utterance: The text to classify.
             node: The current hierarchy node whose children are the candidates.
 
-        Returns:
+        Returns
+        -------
             A float32 array of probabilities aligned with ``node.children``.
         """
         child_names = [child.name for child in node.children]
         pipe = self._get_pipe()
         result: dict = pipe(utterance, candidate_labels=child_names)
-        label_to_score: dict[str, float] = dict(zip(result["labels"], result["scores"]))
+        label_to_score: dict[str, float] = dict(zip(result["labels"], result["scores"], strict=False))
         return np.array([label_to_score[name] for name in child_names], dtype=np.float32)

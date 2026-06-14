@@ -19,6 +19,7 @@ Example::
     pipe.fit(X_train, y_train)
 
     from src.integrations.sklearn import SklearnNodeClassifier
+
     node_clf = SklearnNodeClassifier(pipe)
 """
 
@@ -52,12 +53,13 @@ class SklearnNodeClassifier(NodeClassifier):
             utterance: The text to classify.
             node: The current hierarchy node whose children are the candidates.
 
-        Returns:
+        Returns
+        -------
             A float32 array of probabilities aligned with ``node.children``.
         """
         child_names = [child.name for child in node.children]
         raw_proba: npt.NDArray[np.float64] = self._classifier.predict_proba([utterance])[0]
-        class_to_prob: dict[str, float] = dict(zip(self._classifier.classes_, raw_proba))
+        class_to_prob: dict[str, float] = dict(zip(self._classifier.classes_, raw_proba, strict=False))
         return np.array(
             [class_to_prob.get(name, 0.0) for name in child_names],
             dtype=np.float32,

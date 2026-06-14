@@ -1,11 +1,12 @@
 """Unit tests for src/integrations/huggingface.py."""
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from src.integrations.huggingface import _DEFAULT_MODEL, HuggingFaceZeroShotClassifier
+from src.integrations.huggingface import DEFAULT_MODEL, HuggingFaceZeroShotClassifier
 from src.models import HierarchyNode
 
 
@@ -14,8 +15,9 @@ def _make_hf_result(labels: list[str], scores: list[float]) -> dict:
     return {"labels": labels, "scores": scores}
 
 
-@pytest.fixture()
+@pytest.fixture
 def node_animals() -> HierarchyNode:
+    """HierarchyNode with three children: cat, dog, bird."""
     return HierarchyNode(
         name="root",
         children=[HierarchyNode(name="cat"), HierarchyNode(name="dog"), HierarchyNode(name="bird")],
@@ -23,7 +25,12 @@ def node_animals() -> HierarchyNode:
 
 
 class TestHuggingFaceZeroShotClassifier:
-    def _make_clf_with_mock_pipe(self, node: HierarchyNode, scores_by_label: dict[str, float]):
+    def _make_clf_with_mock_pipe(
+        self,
+        node: HierarchyNode,
+        scores_by_label: dict[str, float],
+    ) -> HuggingFaceZeroShotClassifier:
+        """Create a HuggingFaceZeroShotClassifier with a mocked pipeline."""
         clf = HuggingFaceZeroShotClassifier()
         mock_pipe = MagicMock()
         labels = [c.name for c in node.children]
@@ -31,18 +38,18 @@ class TestHuggingFaceZeroShotClassifier:
         clf._pipe = mock_pipe
         return clf
 
-    def test_returns_probabilities_aligned_with_children(self, node_animals) -> None:
+    def test_returns_probabilities_aligned_with_children(self, node_animals: HierarchyNode) -> None:
         clf = self._make_clf_with_mock_pipe(node_animals, {"cat": 0.6, "dog": 0.3, "bird": 0.1})
         proba = clf.predict_proba("meow", node_animals)
         assert len(proba) == 3
         np.testing.assert_allclose(proba, [0.6, 0.3, 0.1], atol=1e-6)
 
-    def test_dtype_is_float32(self, node_animals) -> None:
+    def test_dtype_is_float32(self, node_animals: HierarchyNode) -> None:
         clf = self._make_clf_with_mock_pipe(node_animals, {"cat": 0.5, "dog": 0.3, "bird": 0.2})
         proba = clf.predict_proba("test", node_animals)
         assert proba.dtype == np.float32
 
-    def test_pipe_called_with_correct_args(self, node_animals) -> None:
+    def test_pipe_called_with_correct_args(self, node_animals: HierarchyNode) -> None:
         clf = HuggingFaceZeroShotClassifier()
         mock_pipe = MagicMock()
         mock_pipe.return_value = _make_hf_result(["cat", "dog", "bird"], [0.5, 0.3, 0.2])
@@ -59,7 +66,7 @@ class TestHuggingFaceZeroShotClassifier:
         clf = HuggingFaceZeroShotClassifier()
         assert clf._pipe is None  # not loaded yet
 
-    def test_pipeline_cached_after_first_call(self, node_animals) -> None:
+    def test_pipeline_cached_after_first_call(self, node_animals: HierarchyNode) -> None:
         clf = HuggingFaceZeroShotClassifier()
         mock_pipe = MagicMock()
         mock_pipe.return_value = _make_hf_result(["cat", "dog", "bird"], [0.5, 0.3, 0.2])
@@ -70,18 +77,15 @@ class TestHuggingFaceZeroShotClassifier:
 
         assert mock_pipe.call_count == 2  # same pipe object called twice
 
-    def test_default_model_used(self) -> None:
+    def test_DEFAULT_MODEL_used(self) -> None:  # noqa: N802
         clf = HuggingFaceZeroShotClassifier()
-        assert clf._model == _DEFAULT_MODEL
+        assert clf._model == DEFAULT_MODEL
 
     def test_custom_model_stored(self) -> None:
         clf = HuggingFaceZeroShotClassifier("cross-encoder/nli-deberta-v3-small")
         assert clf._model == "cross-encoder/nli-deberta-v3-small"
 
     def test_pipeline_kwargs_forwarded(self) -> None:
-        import sys
-        from unittest.mock import patch
-
         mock_transformers = MagicMock()
         pipe_instance = MagicMock(return_value={"labels": ["cat"], "scores": [1.0]})
         mock_transformers.pipeline.return_value = pipe_instance
@@ -93,11 +97,11 @@ class TestHuggingFaceZeroShotClassifier:
 
         mock_transformers.pipeline.assert_called_once_with(
             "zero-shot-classification",
-            model=_DEFAULT_MODEL,
+            model=DEFAULT_MODEL,
             device="cpu",
         )
 
-    def test_order_preserved_when_hf_reorders_labels(self, node_animals) -> None:
+    def test_order_preserved_when_hf_reorders_labels(self, node_animals: HierarchyNode) -> None:
         """HuggingFace may return labels in a different order than supplied."""
         clf = HuggingFaceZeroShotClassifier()
         mock_pipe = MagicMock()

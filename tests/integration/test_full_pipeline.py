@@ -13,6 +13,9 @@ import numpy as np
 import pytest
 
 from src.classifier import HierarchicalClassifier
+from src.integrations.huggingface import HuggingFaceZeroShotClassifier
+from src.integrations.llm import LLMNodeClassifier
+from src.integrations.sklearn import SklearnNodeClassifier
 from src.models import HierarchyNode
 
 # ---------------------------------------------------------------------------
@@ -20,9 +23,9 @@ from src.models import HierarchyNode
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def animal_hierarchy() -> HierarchyNode:
-    """root → {animal, vehicle} → leaves."""
+    """Root → {animal, vehicle} → leaves."""
     animal = HierarchyNode(
         name="animal",
         children=[HierarchyNode(name="cat"), HierarchyNode(name="dog")],
@@ -41,8 +44,6 @@ def animal_hierarchy() -> HierarchyNode:
 
 class TestSklearnIntegration:
     def test_full_classify_with_sklearn(self, animal_hierarchy: HierarchyNode) -> None:
-        from src.integrations.sklearn import SklearnNodeClassifier
-
         # Classifier whose classes_ covers all node names and gives high probability
         # to "animal" and "cat" so the traversal ends at "cat".
         all_names = ["root", "animal", "vehicle", "cat", "dog", "car", "bike"]
@@ -50,10 +51,10 @@ class TestSklearnIntegration:
         class FullClf:
             classes_ = np.array(all_names)
 
-            def predict_proba(self, X):
+            def predict_proba(self, _: str) -> np.ndarray:
                 row = np.zeros(len(self.classes_))
                 for i, name in enumerate(self.classes_):
-                    if name in ("animal", "cat"):
+                    if name in {"animal", "cat"}:
                         row[i] = 0.9
                     else:
                         row[i] = 0.02
@@ -65,17 +66,15 @@ class TestSklearnIntegration:
         assert result == "cat"
 
     def test_full_classify_vehicle_branch(self, animal_hierarchy: HierarchyNode) -> None:
-        from src.integrations.sklearn import SklearnNodeClassifier
-
         all_names = ["root", "animal", "vehicle", "cat", "dog", "car", "bike"]
 
         class VehicleClf:
             classes_ = np.array(all_names)
 
-            def predict_proba(self, X):
+            def predict_proba(self, _: str) -> np.ndarray:
                 row = np.zeros(len(self.classes_))
                 for i, name in enumerate(self.classes_):
-                    if name in ("vehicle", "bike"):
+                    if name in {"vehicle", "bike"}:
                         row[i] = 0.9
                     else:
                         row[i] = 0.02
@@ -92,10 +91,10 @@ class TestSklearnIntegration:
 # ---------------------------------------------------------------------------
 
 
-def _hf_pipeline_factory(routing: dict[str, str]):
+def _hf_pipeline_factory(routing: dict[str, str]) -> callable:
     """Return a callable that acts like a zero-shot pipeline, routing by utterance."""
 
-    def _pipeline(utterance, candidate_labels):
+    def _pipeline(utterance: str, candidate_labels: list[str]) -> dict[str, list[float]]:
         chosen = routing.get(utterance, candidate_labels[0])
         n = len(candidate_labels)
         scores = {lbl: 0.05 / max(n - 1, 1) for lbl in candidate_labels}
@@ -109,8 +108,6 @@ def _hf_pipeline_factory(routing: dict[str, str]):
 
 class TestHuggingFaceIntegration:
     def test_full_classify_animal(self, animal_hierarchy: HierarchyNode) -> None:
-        from src.integrations.huggingface import HuggingFaceZeroShotClassifier
-
         # "meow" at root → animal; "meow" at animal node → first child (cat)
         routing = {"meow": "animal"}
         mock_pipe = _hf_pipeline_factory(routing)
@@ -123,8 +120,6 @@ class TestHuggingFaceIntegration:
         assert result == "cat"
 
     def test_full_classify_vehicle(self, animal_hierarchy: HierarchyNode) -> None:
-        from src.integrations.huggingface import HuggingFaceZeroShotClassifier
-
         routing = {"vroom": "vehicle", "car": "car"}
         mock_pipe = _hf_pipeline_factory(routing)
 
@@ -136,8 +131,6 @@ class TestHuggingFaceIntegration:
         assert result == "car"
 
     def test_pipeline_instantiated_via_transformers(self) -> None:
-        from src.integrations.huggingface import HuggingFaceZeroShotClassifier
-
         node = HierarchyNode(name="root", children=[HierarchyNode(name="cat")])
         clf = HuggingFaceZeroShotClassifier("my-model")
 
@@ -166,19 +159,21 @@ def _make_litellm_response(content: str) -> MagicMock:
     return response
 
 
-@pytest.fixture()
-def mock_litellm():
+@pytest.fixture
+def mock_litellm() -> MagicMock:
     mock = MagicMock()
     with patch.dict(sys.modules, {"litellm": mock}):
         yield mock
 
 
 class TestLLMIntegration:
-    def test_full_classify_routes_to_correct_leaf(self, mock_litellm, animal_hierarchy: HierarchyNode) -> None:
-        from src.integrations.llm import LLMNodeClassifier
-
+    def test_full_classify_routes_to_correct_leaf(
+        self,
+        mock_litellm: MagicMock,
+        animal_hierarchy: HierarchyNode,
+    ) -> None:
         responses = iter(["animal", "dog"])
-        mock_litellm.completion.side_effect = lambda **kwargs: _make_litellm_response(next(responses))
+        mock_litellm.completion.side_effect = lambda **_: _make_litellm_response(next(responses))
 
         clf = LLMNodeClassifier()
         hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
@@ -186,11 +181,9 @@ class TestLLMIntegration:
 
         assert result == "dog"
 
-    def test_full_classify_with_vehicle(self, mock_litellm, animal_hierarchy: HierarchyNode) -> None:
-        from src.integrations.llm import LLMNodeClassifier
-
+    def test_full_classify_with_vehicle(self, mock_litellm: MagicMock, animal_hierarchy: HierarchyNode) -> None:
         responses = iter(["vehicle", "bike"])
-        mock_litellm.completion.side_effect = lambda **kwargs: _make_litellm_response(next(responses))
+        mock_litellm.completion.side_effect = lambda **_: _make_litellm_response(next(responses))
 
         clf = LLMNodeClassifier("ollama/llama3")
         hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
@@ -198,10 +191,8 @@ class TestLLMIntegration:
 
         assert result == "bike"
 
-    def test_unrecognised_llm_output_raises(self, mock_litellm, animal_hierarchy: HierarchyNode) -> None:
+    def test_unrecognised_llm_output_raises(self, mock_litellm: MagicMock, animal_hierarchy: HierarchyNode) -> None:
         """If the LLM returns garbage at every level no leaf is reachable."""
-        from src.integrations.llm import LLMNodeClassifier
-
         mock_litellm.completion.return_value = _make_litellm_response("GARBAGE")
 
         clf = LLMNodeClassifier()

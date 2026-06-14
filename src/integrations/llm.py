@@ -13,9 +13,9 @@ Example::
 
     from src.integrations.llm import LLMNodeClassifier
 
-    clf = LLMNodeClassifier()                            # defaults to gpt-4o-mini
+    clf = LLMNodeClassifier()  # defaults to gpt-4o-mini
     clf = LLMNodeClassifier("anthropic/claude-3-haiku-20240307")
-    clf = LLMNodeClassifier("ollama/llama3")             # local model via Ollama
+    clf = LLMNodeClassifier("ollama/llama3")  # local model via Ollama
 """
 
 import numpy as np
@@ -23,9 +23,9 @@ import numpy.typing as npt
 
 from src.models import HierarchyNode, NodeClassifier
 
-_DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-4o-mini"
 
-_SYSTEM_PROMPT = (
+SYSTEM_PROMPT = (
     "You are a text classification assistant. "
     "Given a piece of text and a list of candidate categories, respond with "
     "exactly one category name from the list — nothing else."
@@ -47,7 +47,7 @@ class LLMNodeClassifier(NodeClassifier):
             ``litellm.completion`` (e.g. ``temperature``, ``api_base``).
     """
 
-    def __init__(self, model: str = _DEFAULT_MODEL, **completion_kwargs: object) -> None:
+    def __init__(self, model: str = DEFAULT_MODEL, **completion_kwargs: object) -> None:
         self._model = model
         self._completion_kwargs = completion_kwargs
 
@@ -58,21 +58,20 @@ class LLMNodeClassifier(NodeClassifier):
             utterance: The text to classify.
             node: The current hierarchy node whose children are the candidates.
 
-        Returns:
+        Returns
+        -------
             A float32 array where the chosen child has probability ``1.0`` and
             all others have ``0.0``.  If the model returns an unrecognised label
             the array is all zeros (no child is traversed).
         """
-        import litellm  # type: ignore[import-untyped]
+        import litellm  # type: ignore[import-untyped]  # noqa: PLC0415
 
         child_names = [child.name for child in node.children]
-        user_content = (
-            f"Categories: {child_names}\n\n" f"Text: {utterance}\n\n" "Reply with the single best category name."
-        )
+        user_content = f"Categories: {child_names}\n\nText: {utterance}\n\n Reply with the single best category name."
         response = litellm.completion(
             model=self._model,
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_content},
             ],
             **self._completion_kwargs,

@@ -1,5 +1,6 @@
 """Unit tests for src/serialization.py."""
 
+import orjson
 import pytest
 
 from src.models import HierarchyNode
@@ -8,7 +9,11 @@ from src.serialization import JsonHierarchySerializer
 
 class TestJsonHierarchySerializer:
     @pytest.mark.anyio
-    async def test_save_then_load_roundtrip(self, tmp_path, flat_hierarchy: HierarchyNode) -> None:
+    async def test_save_then_load_roundtrip(
+        self,
+        tmp_path: pytest.TempPathFactory,
+        flat_hierarchy: HierarchyNode,
+    ) -> None:
         serializer = JsonHierarchySerializer()
         path = tmp_path / "hierarchy.json"
         await serializer.save(flat_hierarchy, path)
@@ -19,16 +24,14 @@ class TestJsonHierarchySerializer:
         assert [c.name for c in loaded.children] == [c.name for c in flat_hierarchy.children]
 
     @pytest.mark.anyio
-    async def test_save_creates_parent_dirs(self, tmp_path, leaf_node: HierarchyNode) -> None:
+    async def test_save_creates_parent_dirs(self, tmp_path: pytest.TempPathFactory, leaf_node: HierarchyNode) -> None:
         serializer = JsonHierarchySerializer()
         path = tmp_path / "nested" / "deep" / "hierarchy.json"
         await serializer.save(leaf_node, path)
         assert path.exists()
 
     @pytest.mark.anyio
-    async def test_save_produces_valid_json(self, tmp_path, leaf_node: HierarchyNode) -> None:
-        import orjson
-
+    async def test_save_produces_valid_json(self, tmp_path: pytest.TempPathFactory, leaf_node: HierarchyNode) -> None:
         serializer = JsonHierarchySerializer()
         path = tmp_path / "node.json"
         await serializer.save(leaf_node, path)
@@ -37,7 +40,7 @@ class TestJsonHierarchySerializer:
         assert data["children"] == []
 
     @pytest.mark.anyio
-    async def test_load_preserves_examples(self, tmp_path) -> None:
+    async def test_load_preserves_examples(self, tmp_path: pytest.TempPathFactory) -> None:
         serializer = JsonHierarchySerializer()
         node = HierarchyNode(name="n", examples=["a", "b"])
         path = tmp_path / "node.json"
@@ -46,7 +49,11 @@ class TestJsonHierarchySerializer:
         assert loaded.examples == ["a", "b"]
 
     @pytest.mark.anyio
-    async def test_load_reconstructs_children_as_hierarchy_nodes(self, tmp_path, flat_hierarchy) -> None:
+    async def test_load_reconstructs_children_as_hierarchy_nodes(
+        self,
+        tmp_path: pytest.TempPathFactory,
+        flat_hierarchy: HierarchyNode,
+    ) -> None:
         serializer = JsonHierarchySerializer()
         path = tmp_path / "flat.json"
         await serializer.save(flat_hierarchy, path)

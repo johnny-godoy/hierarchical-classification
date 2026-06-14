@@ -86,6 +86,6 @@ class TestTraversedNodeOrdering:
 
 class TestScoredNode:
     def test_stores_node_and_cost(self, leaf_node: HierarchyNode) -> None:
-        s = ScoredNode(node=leaf_node, cumulative_cost=3.14)
+        s = ScoredNode(node=leaf_node, cumulative_cost=3.13)
         assert s.node is leaf_node
-        assert s.cumulative_cost == pytest.approx(3.14)
+        assert s.cumulative_cost == pytest.approx(3.13)
