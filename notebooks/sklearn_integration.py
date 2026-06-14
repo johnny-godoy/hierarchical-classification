@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.0"
+__generated_with = "0.23.9"
 app = marimo.App(width="medium")
 
 
@@ -32,60 +32,56 @@ def _():
     from src.integrations.sklearn import SklearnNodeClassifier
     from src.models import HierarchyNode
 
-    return HierarchicalClassifier, HierarchyNode, SklearnNodeClassifier, np, os, sys
+    return HierarchicalClassifier, HierarchyNode, SklearnNodeClassifier
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        # Hierarchical Classification — Sklearn Integration
+    mo.md(r"""
+    # Hierarchical Classification — Sklearn Integration
 
-        This notebook demonstrates the **sklearn integration** bundled with this library.
+    This notebook demonstrates the **sklearn integration** bundled with this library.
 
-        `SklearnNodeClassifier` wraps any scikit-learn probabilistic classifier — typically
-        a `Pipeline` with a text vectoriser and a classifier that implements
-        `predict_proba` — and adapts it to the `NodeClassifier` protocol.
+    `SklearnNodeClassifier` wraps any scikit-learn probabilistic classifier — typically
+    a `Pipeline` with a text vectoriser and a classifier that implements
+    `predict_proba` — and adapts it to the `NodeClassifier` protocol.
 
-        ## How it works
+    ## How it works
 
-        The **same** fitted sklearn model is reused at every node in the hierarchy.
-        When `HierarchicalClassifier` visits a node it calls `predict_proba` for the
-        **child labels** of that node, then follows the highest-probability path down to
-        a leaf.
+    The **same** fitted sklearn model is reused at every node in the hierarchy.
+    When `HierarchicalClassifier` visits a node it calls `predict_proba` for the
+    **child labels** of that node, then follows the highest-probability path down to
+    a leaf.
 
-        ```
-        utterance
-            │
-            ▼
-        SklearnNodeClassifier.predict_proba(utterance, node)
-            │  selects probabilities for node.children from the fitted pipeline
-            ▼
-        HierarchicalClassifier (best-first traversal)
-            │
-            ▼
-          leaf node  ──►  result
-        ```
-        """
-    )
+    ```
+    utterance
+        │
+        ▼
+    SklearnNodeClassifier.predict_proba(utterance, node)
+        │  selects probabilities for node.children from the fitted pipeline
+        ▼
+    HierarchicalClassifier (best-first traversal)
+        │
+        ▼
+      leaf node  ──►  result
+    ```
+    """)
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 1 — Training data
+    mo.md(r"""
+    ## Step 1 — Training data
 
-        Because **the same** fitted sklearn model is reused at every tree node, its
-        `classes_` must cover the children of **every** node it will be asked to score.
-        Our two-level hierarchy has 3 top-level nodes (`Sports`, `Technology`, `Health`)
-        and 9 leaf nodes, so the model must be trained to predict all 12 labels.
+    Because **the same** fitted sklearn model is reused at every tree node, its
+    `classes_` must cover the children of **every** node it will be asked to score.
+    Our two-level hierarchy has 3 top-level nodes (`Sports`, `Technology`, `Health`)
+    and 9 leaf nodes, so the model must be trained to predict all 12 labels.
 
-        The table below shows one row per training example. Top-level examples teach the
-        model to distinguish broad topics; leaf examples give fine-grained signal.
-        """
-    )
+    The table below shows one row per training example. Top-level examples teach the
+    model to distinguish broad topics; leaf examples give fine-grained signal.
+    """)
     return
 
 
@@ -168,7 +164,7 @@ def _():
 
 
 @app.cell
-def _(TRAINING_DATA, mo):
+def _(TRAINING_DATA: list[tuple[str, str]], mo):
     _rows = [
         {"Text": text[:80] + ("…" if len(text) > 80 else ""), "Category": label}
         for text, label in TRAINING_DATA
@@ -215,17 +211,15 @@ def _(HierarchyNode):
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 2 — Configure and train the pipeline
+    mo.md(r"""
+    ## Step 2 — Configure and train the pipeline
 
-        Adjust the slider to change the regularisation strength **C** of the
-        `LogisticRegression` model.  A higher C means less regularisation (the model
-        fits training data more closely); a lower C adds more regularisation.
+    Adjust the slider to change the regularisation strength **C** of the
+    `LogisticRegression` model.  A higher C means less regularisation (the model
+    fits training data more closely); a lower C adds more regularisation.
 
-        The pipeline is **re-trained automatically** whenever you move the slider.
-        """
-    )
+    The pipeline is **re-trained automatically** whenever you move the slider.
+    """)
     return
 
 
@@ -272,19 +266,17 @@ def _(SklearnNodeClassifier, X_train, mo, regularisation, y_train):
         ),
         kind="success",
     )
-    return LogisticRegression, Pipeline, TfidfVectorizer, node_clf, pipeline
+    return TfidfVectorizer, node_clf, pipeline
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 3 — Classify new text
+    mo.md(r"""
+    ## Step 3 — Classify new text
 
-        Pick a preset or enter your own text.  The `HierarchicalClassifier` will use the
-        trained sklearn pipeline to traverse the tree and return the best leaf category.
-        """
-    )
+    Pick a preset or enter your own text.  The `HierarchicalClassifier` will use the
+    trained sklearn pipeline to traverse the tree and return the best leaf category.
+    """)
     return
 
 
@@ -342,15 +334,13 @@ def _(HierarchicalClassifier, hierarchy, mo, node_clf, utterance_input):
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 4 — Probability breakdown
+    mo.md(r"""
+    ## Step 4 — Probability breakdown
 
-        The table below shows the raw probability the sklearn model assigns to every
-        **leaf category** for the current text, sorted from most to least likely.  This
-        lets you see which branches the traversal considered most strongly.
-        """
-    )
+    The table below shows the raw probability the sklearn model assigns to every
+    **leaf category** for the current text, sorted from most to least likely.  This
+    lets you see which branches the traversal considered most strongly.
+    """)
     return
 
 
@@ -382,15 +372,13 @@ def _(hierarchy, mo, pipeline, utterance_input):
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 5 — Explore: swap the underlying model
+    mo.md(r"""
+    ## Step 5 — Explore: swap the underlying model
 
-        The `SklearnNodeClassifier` works with **any** sklearn-compatible estimator
-        that implements `predict_proba` and exposes `classes_`.  Use the radio buttons
-        below to switch between a few classifiers and observe the effect on the results.
-        """
-    )
+    The `SklearnNodeClassifier` works with **any** sklearn-compatible estimator
+    that implements `predict_proba` and exposes `classes_`.  Use the radio buttons
+    below to switch between a few classifiers and observe the effect on the results.
+    """)
     return
 
 
@@ -441,7 +429,7 @@ def _(
         mo.md(f"✅ **{model_choice.value}** pipeline trained on {len(X_train)} examples."),
         kind="success",
     )
-    return MultinomialNB, RandomForestClassifier, alt_node_clf
+    return (alt_node_clf,)
 
 
 @app.cell
@@ -461,21 +449,23 @@ def _(HierarchicalClassifier, alt_node_clf, hierarchy, mo, utterance_input):
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Next steps
+    mo.md(r"""
+    ## Next steps
 
-        - **Improve the model**: add more training data, try different vectorisers
-          (e.g. `HashingVectorizer`, `CountVectorizer`), or tune hyperparameters with
-          `GridSearchCV`.
-        - **Zero-shot classification**: `HuggingFaceZeroShotClassifier` from
-          `src.integrations.huggingface` requires no labelled training data at all.
-        - **LLM-backed classification**: `LLMNodeClassifier` from `src.integrations.llm`
-          works with GPT, Claude, Gemini, and 100+ providers via `litellm`.
-        - **Save/load the hierarchy**: use `await hierarchy.save("hierarchy.json")` and
-          `await HierarchyNode.load("hierarchy.json")`.
-        - **Custom classifier from scratch**: see the **custom classifier** notebook for
-          a step-by-step guide to implementing your own `NodeClassifier`.
-        """
-    )
+    - **Improve the model**: add more training data, try different vectorisers
+      (e.g. `HashingVectorizer`, `CountVectorizer`), or tune hyperparameters with
+      `GridSearchCV`.
+    - **Zero-shot classification**: `HuggingFaceZeroShotClassifier` from
+      `src.integrations.huggingface` requires no labelled training data at all.
+    - **LLM-backed classification**: `LLMNodeClassifier` from `src.integrations.llm`
+      works with GPT, Claude, Gemini, and 100+ providers via `litellm`.
+    - **Save/load the hierarchy**: use `await hierarchy.save("hierarchy.json")` and
+      `await HierarchyNode.load("hierarchy.json")`.
+    - **Custom classifier from scratch**: see the **custom classifier** notebook for
+      a step-by-step guide to implementing your own `NodeClassifier`.
+    """)
     return
+
+
+if __name__ == "__main__":
+    app.run()

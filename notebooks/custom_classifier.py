@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.0"
+__generated_with = "0.23.9"
 app = marimo.App(width="medium")
 
 
@@ -31,55 +31,51 @@ def _():
     from src.classifier import HierarchicalClassifier
     from src.models import HierarchyNode
 
-    return HierarchicalClassifier, HierarchyNode, np, os, sys
+    return HierarchicalClassifier, HierarchyNode, np
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        # Hierarchical Classification — Custom Classifier
+    mo.md(r"""
+    # Hierarchical Classification — Custom Classifier
 
-        This notebook walks through building a **custom `NodeClassifier`** and wiring it
-        into `HierarchicalClassifier`.
+    This notebook walks through building a **custom `NodeClassifier`** and wiring it
+    into `HierarchicalClassifier`.
 
-        A hierarchical classifier traverses a tree of categories, scoring each node with
-        your classifier, and returns the best-matching **leaf** for a given text.
+    A hierarchical classifier traverses a tree of categories, scoring each node with
+    your classifier, and returns the best-matching **leaf** for a given text.
 
-        ## How it works
+    ## How it works
 
-        ```
-        utterance ──► HierarchicalClassifier
-                              │
-                   ┌──────────▼──────────┐
-                   │   NodeClassifier    │  ◄── your custom logic lives here
-                   │  .predict_proba()   │
-                   └──────────┬──────────┘
-                              │  probabilities per child
-                   ┌──────────▼──────────┐
-                   │   Hierarchy tree    │
-                   │   (HierarchyNode)   │
-                   └──────────┬──────────┘
-                              │
-                           leaf node  ──► result
-        ```
-        """
-    )
+    ```
+    utterance ──► HierarchicalClassifier
+                          │
+               ┌──────────▼──────────┐
+               │   NodeClassifier    │  ◄── your custom logic lives here
+               │  .predict_proba()   │
+               └──────────┬──────────┘
+                          │  probabilities per child
+               ┌──────────▼──────────┐
+               │   Hierarchy tree    │
+               │   (HierarchyNode)   │
+               └──────────┬──────────┘
+                          │
+                       leaf node  ──► result
+    ```
+    """)
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 1 — Define the hierarchy
+    mo.md(r"""
+    ## Step 1 — Define the hierarchy
 
-        A `HierarchyNode` is a tree node with a name and optional children.
-        Leaf nodes (no children) are the final categories the classifier can return.
+    A `HierarchyNode` is a tree node with a name and optional children.
+    Leaf nodes (no children) are the final categories the classifier can return.
 
-        Below is a **news article** taxonomy with three top-level topics and nine leaf categories.
-        """
-    )
+    Below is a **news article** taxonomy with three top-level topics and nine leaf categories.
+    """)
     return
 
 
@@ -121,41 +117,39 @@ def _(HierarchyNode):
 def _(hierarchy, mo):
     def _tree_md(node, depth: int = 0) -> list[str]:
         icon = "📁" if node.children else "📄"
-        indent = "  " * depth
+        indent = "      " * depth
         lines = [f"{indent}{icon} **{node.name}**"]
         for child in node.children:
             lines.extend(_tree_md(child, depth + 1))
         return lines
 
-    _tree = "\n".join(_tree_md(hierarchy))
+    _tree = "\n\n".join(_tree_md(hierarchy))
     mo.accordion({"🗂️ Show hierarchy tree": mo.md(_tree)})
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 2 — Implement a custom `NodeClassifier`
+    mo.md(r"""
+    ## Step 2 — Implement a custom `NodeClassifier`
 
-        The `NodeClassifier` protocol requires one method:
+    The `NodeClassifier` protocol requires one method:
 
-        ```python
-        def predict_proba(self, utterance: str, node: HierarchyNode) -> np.ndarray:
-            ...
-        ```
+    ```python
+    def predict_proba(self, utterance: str, node: HierarchyNode) -> np.ndarray:
+        ...
+    ```
 
-        It must return a **probability array** — one entry per child of `node`, summing
-        to 1.  Any approach works: keyword matching, ML model, rules, or LLM.
+    It must return a **probability array** — one entry per child of `node`, summing
+    to 1.  Any approach works: keyword matching, ML model, rules, or LLM.
 
-        Inheriting from `NodeClassifier` gives you the default `neg_log_proba`
-        implementation for free, so only `predict_proba` needs to be overridden
-        (the same pattern used by all built-in integrations).
+    Inheriting from `NodeClassifier` gives you the default `neg_log_proba`
+    implementation for free, so only `predict_proba` needs to be overridden
+    (the same pattern used by all built-in integrations).
 
-        Here we build a **keyword-matching** classifier that scores each child by counting
-        matching keywords in the utterance.
-        """
-    )
+    Here we build a **keyword-matching** classifier that scores each child by counting
+    matching keywords in the utterance.
+    """)
     return
 
 
@@ -208,7 +202,7 @@ def _(np):
 
 
 @app.cell
-def _(KEYWORDS, mo):
+def _(KEYWORDS: dict[str, list[str]], mo):
     _rows = [
         {"Category": cat, "Keywords": ", ".join(kws)}
         for cat, kws in KEYWORDS.items()
@@ -221,14 +215,12 @@ def _(KEYWORDS, mo):
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 3 — Try it live!
+    mo.md(r"""
+    ## Step 3 — Try it live!
 
-        Pick a preset or type your own text to watch the classifier traverse the hierarchy
-        in real time.
-        """
-    )
+    Pick a preset or type your own text to watch the classifier traverse the hierarchy
+    in real time.
+    """)
     return
 
 
@@ -269,7 +261,13 @@ def _(mo, preset_picker):
 
 
 @app.cell
-def _(HierarchicalClassifier, KeywordNodeClassifier, hierarchy, mo, utterance_input):
+def _(
+    HierarchicalClassifier,
+    KeywordNodeClassifier,
+    hierarchy,
+    mo,
+    utterance_input,
+):
     _text = utterance_input.value.strip()
     if _text:
         _clf = HierarchicalClassifier(
@@ -288,19 +286,17 @@ def _(HierarchicalClassifier, KeywordNodeClassifier, hierarchy, mo, utterance_in
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Step 4 — Probability breakdown
+    mo.md(r"""
+    ## Step 4 — Probability breakdown
 
-        The table below shows the raw probability assigned to every node at each level
-        of the hierarchy, so you can see exactly how the traversal scores each branch.
-        """
-    )
+    The table below shows the raw probability assigned to every node at each level
+    of the hierarchy, so you can see exactly how the traversal scores each branch.
+    """)
     return
 
 
 @app.cell
-def _(KEYWORDS, hierarchy, mo, np, utterance_input):
+def _(KEYWORDS: dict[str, list[str]], hierarchy, mo, np, utterance_input):
     _text = utterance_input.value.strip().lower()
 
     def _score(node_name: str) -> float:
@@ -324,23 +320,25 @@ def _(KEYWORDS, hierarchy, mo, np, utterance_input):
             )
 
     mo.ui.table(rows, selection=None)
-    return (rows,)
+    return
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ## Next steps
+    mo.md(r"""
+    ## Next steps
 
-        - **Replace the keyword classifier** with an ML model — see the **sklearn
-          integration** notebook for a drop-in example using `TF-IDF + LogisticRegression`.
-        - **Persist the hierarchy** with `await hierarchy.save("hierarchy.json")` and reload
-          it with `await HierarchyNode.load("hierarchy.json")`.
-        - **Attach training examples** to nodes via `HierarchyNode.examples` to keep
-          your labelled data alongside the hierarchy definition.
-        - **Zero-shot classification** — try `HuggingFaceZeroShotClassifier` from
-          `src.integrations.huggingface` when you have no labelled data at all.
-        """
-    )
+    - **Replace the keyword classifier** with an ML model — see the **sklearn
+      integration** notebook for a drop-in example using `TF-IDF + LogisticRegression`.
+    - **Persist the hierarchy** with `await hierarchy.save("hierarchy.json")` and reload
+      it with `await HierarchyNode.load("hierarchy.json")`.
+    - **Attach training examples** to nodes via `HierarchyNode.examples` to keep
+      your labelled data alongside the hierarchy definition.
+    - **Zero-shot classification** — try `HuggingFaceZeroShotClassifier` from
+      `src.integrations.huggingface` when you have no labelled data at all.
+    """)
     return
+
+
+if __name__ == "__main__":
+    app.run()
