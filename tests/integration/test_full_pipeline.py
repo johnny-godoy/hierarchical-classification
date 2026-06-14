@@ -6,8 +6,6 @@ HierarchicalClassifier → NodeClassifier → predict_proba → neg_log_proba �
 chain without any stubbing of internal code.
 """
 
-from __future__ import annotations
-
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -16,7 +14,6 @@ import pytest
 
 from src.classifier import HierarchicalClassifier
 from src.models import HierarchyNode
-
 
 # ---------------------------------------------------------------------------
 # Shared hierarchy
@@ -105,7 +102,7 @@ def _hf_pipeline_factory(routing: dict[str, str]):
         if chosen in scores:
             scores[chosen] = 0.95
         labels = candidate_labels
-        return {"labels": labels, "scores": [scores[l] for l in labels]}
+        return {"labels": labels, "scores": [scores[label] for label in labels]}
 
     return _pipeline
 
@@ -151,9 +148,7 @@ class TestHuggingFaceIntegration:
         with patch.dict(sys.modules, {"transformers": mock_transformers}):
             clf.predict_proba("meow", node)
 
-        mock_transformers.pipeline.assert_called_once_with(
-            "zero-shot-classification", model="my-model"
-        )
+        mock_transformers.pipeline.assert_called_once_with("zero-shot-classification", model="my-model")
 
 
 # ---------------------------------------------------------------------------
