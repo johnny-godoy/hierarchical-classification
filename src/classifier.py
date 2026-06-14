@@ -21,12 +21,12 @@ class HierarchicalClassifier:
             current_node = heapq.heappop(traversal_heap)
             if current_node.cost > best_cost:
                 continue
-            new_path = current_node.path + [current_node.node]
             if current_node.node.is_leaf:
                 if current_node.cost < best_cost:
                     best_cost = current_node.cost
                     best_leaf = current_node.node
                 continue
+            new_path = current_node.path + [current_node.node]
             for scored_node in self.classifier.neg_log_proba(
                 utterance,
                 current_node,
