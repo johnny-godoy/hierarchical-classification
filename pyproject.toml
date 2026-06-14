@@ -1,9 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
 [project]
 name = "hierarchical-classification"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Hierarchical text classification with pluggable sklearn, Hugging Face, and LiteLLM backends."
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.12"
+license = { file = "LICENSE.md" }
+keywords = [
+    "classification",
+    "hierarchical-classification",
+    "machine-learning",
+    "nlp",
+    "text-classification",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "anyio>=4.13.0",
     "attrs>=26.1.0",
@@ -11,10 +33,16 @@ dependencies = [
     "orjson>=3.11.8",
 ]
 
+[project.urls]
+Homepage = "https://github.com/johnny-godoy/hierarchical-classification"
+Repository = "https://github.com/johnny-godoy/hierarchical-classification"
+Issues = "https://github.com/johnny-godoy/hierarchical-classification/issues"
+
 [project.optional-dependencies]
 sklearn = ["scikit-learn>=1.0"]
-huggingface = ["transformers>=4.0"]
+huggingface = ["transformers>=4.0", "torch>=2.0"]
 llm = ["litellm>=1.0"]
+notebooks = ["marimo>=0.23.9"]
 
 [dependency-groups]
 dev = [
@@ -23,3 +51,6 @@ dev = [
     "pytest-anyio",
     "scikit-learn>=1.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
