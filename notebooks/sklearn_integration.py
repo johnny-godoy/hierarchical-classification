@@ -321,7 +321,7 @@ def _(mo, preset_picker):
 def _(HierarchicalClassifier, hierarchy, mo, node_clf, utterance_input):
     _text = utterance_input.value.strip()
     if _text:
-        _clf = HierarchicalClassifier(classifier=node_clf, hierarchy=hierarchy)
+        _clf = HierarchicalClassifier.from_classifier(node_classifier=node_clf, hierarchy=hierarchy)
         _result = _clf.classify(_text)
         mo.callout(
             mo.md(f"🏷️  **Predicted category:** {_result}"),
@@ -436,7 +436,7 @@ def _(
 def _(HierarchicalClassifier, alt_node_clf, hierarchy, mo, utterance_input):
     _text = utterance_input.value.strip()
     if _text:
-        _clf = HierarchicalClassifier(classifier=alt_node_clf, hierarchy=hierarchy)
+        _clf = HierarchicalClassifier.from_classifier(node_classifier=alt_node_clf, hierarchy=hierarchy)
         _result = _clf.classify(_text)
         mo.callout(
             mo.md(f"🏷️  **Alternative model prediction:** {_result}"),

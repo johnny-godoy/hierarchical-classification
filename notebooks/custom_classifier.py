@@ -270,8 +270,8 @@ def _(
 ):
     _text = utterance_input.value.strip()
     if _text:
-        _clf = HierarchicalClassifier(
-            classifier=KeywordNodeClassifier(),
+        _clf = HierarchicalClassifier.from_classifier(
+            node_classifier=KeywordNodeClassifier(),
             hierarchy=hierarchy,
         )
         _result = _clf.classify(_text)
