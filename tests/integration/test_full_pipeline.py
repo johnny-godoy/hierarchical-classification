@@ -2,7 +2,7 @@
 
 External library calls (transformers pipeline, litellm.completion) are mocked so
 these tests remain fast and offline, while still exercising the full
-HierarchicalClassifier → NodeClassifier → predict_proba → neg_log_proba → classify
+HierarchicalClassifier → ScoringStrategy → NodeClassifier → predict_proba → classify
 chain without any stubbing of internal code.
 """
 
@@ -60,7 +60,7 @@ class TestSklearnIntegration:
                 return np.array([row])
 
         node_clf = SklearnNodeClassifier(FullClf())
-        hc = HierarchicalClassifier(classifier=node_clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(node_clf, animal_hierarchy)
         result = hc.classify("a cat is an animal")
         assert result == "cat"
 
@@ -82,7 +82,7 @@ class TestSklearnIntegration:
                 return np.array([row])
 
         node_clf = SklearnNodeClassifier(VehicleClf())
-        hc = HierarchicalClassifier(classifier=node_clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(node_clf, animal_hierarchy)
         result = hc.classify("riding my bike")
         assert result == "bike"
 
@@ -118,7 +118,7 @@ class TestHuggingFaceIntegration:
         clf = HuggingFaceZeroShotClassifier()
         clf._pipe = mock_pipe
 
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
         result = hc.classify("meow")
         assert result == "cat"
 
@@ -131,7 +131,7 @@ class TestHuggingFaceIntegration:
         clf = HuggingFaceZeroShotClassifier()
         clf._pipe = mock_pipe
 
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
         result = hc.classify("vroom")
         assert result == "car"
 
@@ -181,7 +181,7 @@ class TestLLMIntegration:
         mock_litellm.completion.side_effect = lambda **kwargs: _make_litellm_response(next(responses))
 
         clf = LLMNodeClassifier()
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
         result = hc.classify("the dog barked")
 
         assert result == "dog"
@@ -193,7 +193,7 @@ class TestLLMIntegration:
         mock_litellm.completion.side_effect = lambda **kwargs: _make_litellm_response(next(responses))
 
         clf = LLMNodeClassifier("ollama/llama3")
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
         result = hc.classify("riding my bike")
 
         assert result == "bike"
@@ -205,6 +205,6 @@ class TestLLMIntegration:
         mock_litellm.completion.return_value = _make_litellm_response("GARBAGE")
 
         clf = LLMNodeClassifier()
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=animal_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, animal_hierarchy)
         with pytest.raises(ValueError, match="No leaf node found"):
             hc.classify("nonsense")

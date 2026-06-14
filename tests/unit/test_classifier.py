@@ -11,25 +11,25 @@ from tests.conftest import DeterministicClassifier
 
 class TestHierarchicalClassifierClassify:
     def test_flat_hierarchy_picks_first_child(self, flat_hierarchy: HierarchyNode, first_child_classifier) -> None:
-        hc = HierarchicalClassifier(classifier=first_child_classifier, hierarchy=flat_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(first_child_classifier, flat_hierarchy)
         result = hc.classify("any text")
         assert result == "cat"
 
     def test_flat_hierarchy_picks_second_child(self, flat_hierarchy: HierarchyNode) -> None:
         clf = DeterministicClassifier(target_index=1)
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=flat_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, flat_hierarchy)
         result = hc.classify("any text")
         assert result == "dog"
 
     def test_flat_hierarchy_picks_third_child(self, flat_hierarchy: HierarchyNode) -> None:
         clf = DeterministicClassifier(target_index=2)
-        hc = HierarchicalClassifier(classifier=clf, hierarchy=flat_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(clf, flat_hierarchy)
         result = hc.classify("any text")
         assert result == "bird"
 
     def test_deep_hierarchy_traverses_to_leaf(self, deep_hierarchy: HierarchyNode, first_child_classifier) -> None:
         # first child of root = "animal", first child of "animal" = "cat"
-        hc = HierarchicalClassifier(classifier=first_child_classifier, hierarchy=deep_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(first_child_classifier, deep_hierarchy)
         result = hc.classify("meow")
         assert result == "cat"
 
@@ -43,7 +43,7 @@ class TestHierarchicalClassifierClassify:
                     proba[-1] = 1.0
                 return proba
 
-        hc = HierarchicalClassifier(classifier=LastChildClassifier(), hierarchy=deep_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(LastChildClassifier(), deep_hierarchy)
         result = hc.classify("ride a bike")
         assert result == "bike"
 
@@ -54,14 +54,14 @@ class TestHierarchicalClassifierClassify:
             def predict_proba(self, utterance: str, node: HierarchyNode) -> npt.NDArray[np.float32]:
                 return np.zeros(len(node.children), dtype=np.float32)
 
-        hc = HierarchicalClassifier(classifier=NeverClassifier(), hierarchy=root)
+        hc = HierarchicalClassifier.from_classifier(NeverClassifier(), root)
         with pytest.raises(ValueError, match="No leaf node found"):
             hc.classify("unreachable")
 
     def test_single_leaf_as_root_returns_its_name(self) -> None:
         """Root that is itself a leaf (no children)."""
         root = HierarchyNode(name="only_leaf")
-        hc = HierarchicalClassifier(classifier=DeterministicClassifier(), hierarchy=root)
+        hc = HierarchicalClassifier.from_classifier(DeterministicClassifier(), root)
         # The root is a leaf, so it should be returned immediately.
         result = hc.classify("anything")
         assert result == "only_leaf"
@@ -78,7 +78,7 @@ class TestHierarchicalClassifierClassify:
                     proba[0] = 1.0
                 return proba
 
-        hc = HierarchicalClassifier(classifier=RecordingClassifier(), hierarchy=flat_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(RecordingClassifier(), flat_hierarchy)
         hc.classify("hello world")
         assert "hello world" in received
 
@@ -97,6 +97,6 @@ class TestHierarchicalClassifierClassify:
                     return np.array([0.6, 0.4], dtype=np.float32)  # car, bike
                 return np.ones(len(child_names), dtype=np.float32) / len(child_names)
 
-        hc = HierarchicalClassifier(classifier=WeightedClassifier(), hierarchy=deep_hierarchy)
+        hc = HierarchicalClassifier.from_classifier(WeightedClassifier(), deep_hierarchy)
         result = hc.classify("meow")
         assert result == "cat"
