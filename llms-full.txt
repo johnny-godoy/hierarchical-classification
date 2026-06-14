@@ -1,0 +1,86 @@
+# hierarchical-classification: full LLM usage guide
+
+This document is for coding assistants and autonomous agents integrating the library for end users.
+
+## What this library does
+The library routes input text through a hierarchy of categories. At each non-leaf node, a node-level classifier scores that node's children. The traversal continues until the best leaf is found.
+
+Returned output from classify(...) is a leaf label string.
+
+## Public objects to use
+- Hierarchy model: src.models.HierarchyNode
+- Main orchestrator: src.classifier.HierarchicalClassifier
+- Custom backend protocol: src.models.NodeClassifier
+- Built-in adapters:
+  - src.integrations.sklearn.SklearnNodeClassifier
+  - src.integrations.huggingface.HuggingFaceZeroShotClassifier
+  - src.integrations.llm.LLMNodeClassifier
+
+## Installation matrix
+Core only:
+uv add hierarchical-classification
+
+Source checkout:
+uv sync
+
+Backend extras:
+- sklearn backend: uv sync --extra sklearn
+- huggingface backend: uv sync --extra huggingface
+- litellm backend: uv sync --extra llm
+- notebooks: uv sync --extra notebooks
+
+## Recommended integration flow for agents
+1. Start with the smallest valid hierarchy that matches the user's label taxonomy.
+2. Use a deterministic backend first when possible (custom or sklearn) before remote LLMs.
+3. Keep sibling names concise and semantically distinct; these names are candidate labels.
+4. Validate at least one sample utterance per branch.
+5. If confidence signals are needed, expose backend probabilities separately (if supported).
+
+## Custom backend contract
+Implement a class compatible with NodeClassifier:
+- method: predict_proba(utterance, node)
+- output: numpy float32 array aligned with node.children
+
+Practical requirements:
+- output length must equal len(node.children)
+- values should be non-negative
+- normalized probabilities are preferred
+
+## Backend caveats
+Sklearn adapter:
+- underlying model must provide predict_proba and classes_
+- classes_ values should cover all child labels encountered in traversal
+- missing labels map to 0.0 probability
+
+Hugging Face zero-shot adapter:
+- uses child names directly as candidate_labels
+- model pipeline is loaded lazily on first request
+
+LiteLLM adapter:
+- asks the model to return exactly one child name
+- output is one-hot over children (1.0 for chosen label, 0.0 otherwise)
+- if the model returns an unknown label, all probabilities may be zero
+- ensure provider credentials and model string are configured
+
+## Minimal agent-safe example
+from src.models import HierarchyNode
+from src.classifier import HierarchicalClassifier
+from src.integrations.llm import LLMNodeClassifier
+
+hierarchy = HierarchyNode(
+    name="root",
+    children=[
+        HierarchyNode(name="billing", children=[HierarchyNode(name="refund"), HierarchyNode(name="invoice")]),
+        HierarchyNode(name="technical", children=[HierarchyNode(name="bug"), HierarchyNode(name="feature")]),
+    ],
+)
+
+node_classifier = LLMNodeClassifier("gpt-4o-mini")
+classifier = HierarchicalClassifier.from_classifier(node_classifier=node_classifier, hierarchy=hierarchy)
+label = classifier.classify("I was charged twice and need my money back")
+
+## Operational notes for agents
+- Keep tree depth shallow initially (2-3 levels) unless the user asks for finer taxonomy.
+- Avoid adding dependencies not required by selected backend.
+- For reproducible demos/tests, prefer sklearn integration.
+- For quick no-training setups, prefer Hugging Face zero-shot or LiteLLM.

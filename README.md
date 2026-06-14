@@ -86,6 +86,29 @@ They map to these backends:
 - `litellm` for hosted or local LLM-based routing
 - `marimo` to run the notebooks in `notebooks/`
 
+## LLM and Agent Friendly Usage
+
+If you're using  coding agents to interact with this library, keep a compact machine-readable brief in the repository root:
+
+- `llms.txt`: short, high-signal usage contract
+- `llms-full.txt`: longer version with caveats and examples
+
+Both files are included in this repository and summarize exactly what agents usually need:
+
+- install command (`uv add` or `uv sync --extra ...`)
+- core imports (`HierarchyNode`, `HierarchicalClassifier`, backend adapters)
+- required method contract (`predict_proba(utterance, node)`)
+- backend-specific constraints (for example, sklearn `classes_` coverage)
+
+Recommended prompt pattern for tools/agents:
+
+```text
+Use this repository's llms.txt as the source of truth.
+Prefer the smallest working hierarchy first.
+Use HierarchicalClassifier.from_classifier(...).
+Only pull optional extras for the backend you selected.
+```
+
 ## How it works
 
 At each non-leaf node, the classifier scores that node's children. The traversal keeps exploring the lowest-cost path until it finds the best leaf.

@@ -1,0 +1,56 @@
+# hierarchical-classification
+
+Purpose: Hierarchical text classification with pluggable node-level backends.
+Python: 3.12+
+
+## Install
+Core:
+uv add hierarchical-classification
+
+From source:
+uv sync
+
+Optional backends:
+uv sync --extra sklearn
+uv sync --extra huggingface
+uv sync --extra llm
+
+## Main API
+- src.models.HierarchyNode
+- src.classifier.HierarchicalClassifier
+- src.models.NodeClassifier protocol
+
+Factory:
+HierarchicalClassifier.from_classifier(node_classifier, hierarchy)
+
+Inference:
+classifier.classify(utterance: str) -> str  # leaf node name
+
+## NodeClassifier contract
+Implement:
+predict_proba(utterance: str, node: HierarchyNode) -> np.ndarray[np.float32]
+
+Rules:
+- return one score per direct child in node.children order
+- prefer normalized probabilities (sum ~= 1)
+- child names should be stable and unique per sibling set
+
+## Built-in integrations
+Sklearn:
+- import: src.integrations.sklearn.SklearnNodeClassifier
+- wrapped estimator must expose predict_proba and classes_
+- classes_ should include every child label that may be visited
+
+Hugging Face zero-shot:
+- import: src.integrations.huggingface.HuggingFaceZeroShotClassifier
+- child node names are used as candidate labels
+
+LiteLLM:
+- import: src.integrations.llm.LLMNodeClassifier
+- set provider credentials (example: OPENAI_API_KEY)
+
+## Minimal usage pattern
+1) Build a HierarchyNode tree.
+2) Create or select a NodeClassifier.
+3) Build classifier with HierarchicalClassifier.from_classifier(...).
+4) Call classify(text) and use returned leaf label.
