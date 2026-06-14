@@ -18,8 +18,6 @@ Example::
     clf = LLMNodeClassifier("ollama/llama3")             # local model via Ollama
 """
 
-from __future__ import annotations
-
 import numpy as np
 import numpy.typing as npt
 
@@ -69,9 +67,7 @@ class LLMNodeClassifier(NodeClassifier):
 
         child_names = [child.name for child in node.children]
         user_content = (
-            f"Categories: {child_names}\n\n"
-            f"Text: {utterance}\n\n"
-            "Reply with the single best category name."
+            f"Categories: {child_names}\n\n" f"Text: {utterance}\n\n" "Reply with the single best category name."
         )
         response = litellm.completion(
             model=self._model,

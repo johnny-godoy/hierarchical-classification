@@ -1,13 +1,11 @@
 """Unit tests for src/integrations/huggingface.py."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from src.integrations.huggingface import HuggingFaceZeroShotClassifier, _DEFAULT_MODEL
+from src.integrations.huggingface import _DEFAULT_MODEL, HuggingFaceZeroShotClassifier
 from src.models import HierarchyNode
 
 
@@ -29,7 +27,7 @@ class TestHuggingFaceZeroShotClassifier:
         clf = HuggingFaceZeroShotClassifier()
         mock_pipe = MagicMock()
         labels = [c.name for c in node.children]
-        mock_pipe.return_value = _make_hf_result(labels, [scores_by_label[l] for l in labels])
+        mock_pipe.return_value = _make_hf_result(labels, [scores_by_label[label] for label in labels])
         clf._pipe = mock_pipe
         return clf
 
@@ -104,9 +102,7 @@ class TestHuggingFaceZeroShotClassifier:
         clf = HuggingFaceZeroShotClassifier()
         mock_pipe = MagicMock()
         # HF returned labels in reversed order
-        mock_pipe.return_value = _make_hf_result(
-            ["bird", "dog", "cat"], [0.1, 0.3, 0.6]
-        )
+        mock_pipe.return_value = _make_hf_result(["bird", "dog", "cat"], [0.1, 0.3, 0.6])
         clf._pipe = mock_pipe
 
         proba = clf.predict_proba("meow", node_animals)

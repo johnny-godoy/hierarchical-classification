@@ -22,17 +22,11 @@ Example::
     node_clf = SklearnNodeClassifier(pipe)
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
 import numpy as np
 import numpy.typing as npt
+from sklearn.base import ClassifierMixin
 
 from src.models import HierarchyNode, NodeClassifier
-
-if TYPE_CHECKING:
-    from sklearn.base import ClassifierMixin
 
 
 class SklearnNodeClassifier(NodeClassifier):

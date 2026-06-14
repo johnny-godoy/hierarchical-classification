@@ -16,8 +16,6 @@ Example::
     clf = HuggingFaceZeroShotClassifier("cross-encoder/nli-deberta-v3-small")
 """
 
-from __future__ import annotations
-
 import numpy as np
 import numpy.typing as npt
 

@@ -1,7 +1,5 @@
 """Unit tests for src/classifier.py."""
 
-from __future__ import annotations
-
 import numpy as np
 import numpy.typing as npt
 import pytest

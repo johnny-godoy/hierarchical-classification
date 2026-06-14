@@ -1,13 +1,10 @@
 """Unit tests for src/models.py."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 
 from src.models import HierarchyNode, NodeClassifier, ScoredNode, TraversedNode
 from tests.conftest import DeterministicClassifier
-
 
 # ---------------------------------------------------------------------------
 # HierarchyNode

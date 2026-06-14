@@ -6,8 +6,7 @@ import numpy as np
 import numpy.typing as npt
 import pytest
 
-from src.models import HierarchyNode, NodeClassifier, TraversedNode
-
+from src.models import HierarchyNode, NodeClassifier
 
 # ---------------------------------------------------------------------------
 # Hierarchy fixtures

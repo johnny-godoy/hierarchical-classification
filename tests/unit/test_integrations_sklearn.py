@@ -1,7 +1,5 @@
 """Unit tests for src/integrations/sklearn.py."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 
@@ -54,8 +52,8 @@ class TestSklearnNodeClassifier:
         inner = _FakeSklearnClf(["cat", "dog"], {"cat": 0.8, "dog": 0.2})
         clf = SklearnNodeClassifier(inner)
         proba = clf.predict_proba("cat", node)
-        assert proba[0] == pytest.approx(0.0)   # unknown_class → 0
-        assert proba[1] == pytest.approx(0.8)   # cat → 0.8
+        assert proba[0] == pytest.approx(0.0)  # unknown_class → 0
+        assert proba[1] == pytest.approx(0.8)  # cat → 0.8
 
     def test_probabilities_are_float32(self, sklearn_clf_cat_dog, node_with_cat_dog) -> None:
         proba = sklearn_clf_cat_dog.predict_proba("x", node_with_cat_dog)

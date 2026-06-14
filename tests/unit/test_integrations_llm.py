@@ -1,14 +1,12 @@
 """Unit tests for src/integrations/llm.py."""
 
-from __future__ import annotations
-
 import sys
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from src.integrations.llm import LLMNodeClassifier, _DEFAULT_MODEL, _SYSTEM_PROMPT
+from src.integrations.llm import _DEFAULT_MODEL, _SYSTEM_PROMPT, LLMNodeClassifier
 from src.models import HierarchyNode
 
 
