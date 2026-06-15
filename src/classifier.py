@@ -1,14 +1,15 @@
 """Define a classifier for hierarchical classification."""
 
-import dataclasses
 import heapq
 from typing import Self
+
+import attrs
 
 from src.models import HierarchyNode, NodeClassifier, TraversedNode
 from src.scoring import NegLogScoringStrategy, ScoringStrategy
 
 
-@dataclasses.dataclass
+@attrs.define
 class HierarchicalClassifier:
     """A classifier that traverses a hierarchy to classify an utterance.
 
