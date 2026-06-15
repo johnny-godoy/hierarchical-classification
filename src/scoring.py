@@ -52,12 +52,13 @@ class NegLogScoringStrategy[T]:
             An iterator of ScoredNode instances for each child with finite probability.
         """
         probabilities = self._classifier.predict_proba(utterance, node)
-        finite_mask = probabilities > 0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            costs = current_cost - np.log(probabilities)
+        finite_mask = np.isfinite(costs)
         if not np.any(finite_mask):
             return iter(())
-        valid_scores = current_cost - np.log(probabilities[finite_mask])
         valid_children = itertools.compress(node.children, finite_mask)
         return (
             ScoredNode(node=child_node, cumulative_cost=score)
-            for child_node, score in zip(valid_children, valid_scores, strict=False)
+            for child_node, score in zip(valid_children, costs[finite_mask], strict=False)
         )

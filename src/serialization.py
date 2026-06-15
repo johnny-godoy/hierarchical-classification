@@ -49,4 +49,4 @@ class JsonHierarchySerializer(HierarchySerializer[T]):
             A HierarchyNode instance reconstructed from the JSON file.
         """
         data = orjson.loads(await anyio.Path(path).read_bytes())
-        return HierarchyNode.from__dict(data)
+        return HierarchyNode.from_dict(data)

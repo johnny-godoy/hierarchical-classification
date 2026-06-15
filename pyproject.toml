@@ -47,6 +47,7 @@ notebooks = ["marimo>=0.23.9"]
 [dependency-groups]
 dev = [
     "marimo>=0.9.0",
+    "plotly>=5.24.0",
     "pytest>=8.0",
     "pytest-anyio",
     "scikit-learn>=1.0",
@@ -138,6 +139,7 @@ select = ["ALL"]
     "PLR1711",
     "N803",
 ]
+
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

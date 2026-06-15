@@ -356,6 +356,58 @@ To run a narrower slice:
 uv run pytest tests/integration/test_full_pipeline.py
 ```
 
+### Benchmark path-finding algorithms
+
+The repository includes a benchmark suite that compares:
+
+- the current best-first algorithm (`HierarchicalClassifier`)
+- a greedy local-choice traversal
+- a brute-force exhaustive traversal
+
+It evaluates both runtime and `%optimality` against brute-force on realistic synthetic hierarchies with increasing depth/size.
+
+Run it from the repository root:
+
+```bash
+uv run benchmarks/pathfinding_benchmark.py --repeats 12
+```
+
+Each run is appended to `.benchmarks/pathfinding_runs.jsonl` (git-ignored) and includes:
+
+- timestamp
+- current git commit SHA
+- per-problem metrics for each algorithm (`optimality_pct`, `mean_ms`, `median_ms`)
+
+### Compare benchmark runs and pick the best one
+
+Use the comparison report to find the best run under this rule:
+
+- `main` optimality must stay at `100%` on every problem
+- among those runs, lower `main` runtime is better
+
+Run:
+
+```bash
+uv run benchmarks/pathfinding_compare.py
+```
+
+This prints:
+
+- how many runs were loaded
+- how many runs qualify under the optimality rule
+- the best qualifying run
+- a latest-vs-previous speed delta summary
+
+It also writes interactive HTML plots to `.benchmarks/reports/` by default.
+
+Useful options:
+
+```bash
+uv run benchmarks/pathfinding_compare.py --top 10
+uv run benchmarks/pathfinding_compare.py --plot-dir .benchmarks/custom-reports
+uv run benchmarks/pathfinding_compare.py --no-plots
+```
+
 ## Current Status
 
 This repository already includes tested integration coverage for:

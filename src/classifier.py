@@ -59,20 +59,11 @@ class HierarchicalClassifier:
         ValueError
             If no leaf node is found in the hierarchy.
         """
-        traversal_heap = [TraversedNode(cost=0.0, node=self.hierarchy, path=[])]
-        best_leaf = None
-        best_cost = float("inf")
-
+        traversal_heap = [TraversedNode(cost=0.0, node=self.hierarchy)]
         while traversal_heap:
             current_node = heapq.heappop(traversal_heap)
-            if current_node.cost > best_cost:
-                continue
             if current_node.node.is_leaf:
-                if current_node.cost < best_cost:
-                    best_cost = current_node.cost
-                    best_leaf = current_node.node
-                continue
-            new_path = [*current_node.path, current_node.node]
+                return current_node.node.name
             for scored_node in self.scoring_strategy.score_children(
                 utterance,
                 current_node.node,
@@ -80,9 +71,7 @@ class HierarchicalClassifier:
             ):
                 heapq.heappush(
                     traversal_heap,
-                    TraversedNode(cost=scored_node.cumulative_cost, node=scored_node.node, path=new_path),
+                    TraversedNode(cost=scored_node.cumulative_cost, node=scored_node.node),
                 )
-        if best_leaf is None:
-            msg = "No leaf node found in the hierarchy."
-            raise ValueError(msg)
-        return best_leaf.name
+        msg = "No leaf node found in the hierarchy."
+        raise ValueError(msg)
