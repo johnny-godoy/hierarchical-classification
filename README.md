@@ -369,7 +369,7 @@ It evaluates both runtime and `%optimality` against brute-force on realistic syn
 Run it from the repository root:
 
 ```bash
-python benchmarks/pathfinding_benchmark.py --repeats 12
+uv run benchmarks/pathfinding_benchmark.py --repeats 12
 ```
 
 Each run is appended to `.benchmarks/pathfinding_runs.jsonl` (git-ignored) and includes:
