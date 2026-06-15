@@ -30,7 +30,7 @@ class HierarchyNode[T]:
         return not self.children
 
     @staticmethod
-    def from__dict(data: Mapping) -> HierarchyNode:
+    def from_dict(data: Mapping) -> HierarchyNode:
         """Recursively reconstruct a HierarchyNode from a plain dict.
 
         Parameters
@@ -46,7 +46,7 @@ class HierarchyNode[T]:
         """
         return HierarchyNode(
             name=data["name"],
-            children=[HierarchyNode.from__dict(c) for c in data.get("children", [])],
+            children=[HierarchyNode.from_dict(c) for c in data.get("children", [])],
             examples=data.get("examples", []),
         )
 
