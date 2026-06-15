@@ -308,18 +308,18 @@ def _(KEYWORDS: dict[str, list[str]], hierarchy, mo, np, utterance_input):
         return sum(1.0 for kw in kws if kw in text) + 0.1
 
     rows = []
-    for _level_node in [hierarchy, *hierarchy.children]:
-        if not _level_node.children:
+    for level_node in [hierarchy, *hierarchy.children]:
+        if not level_node.children:
             continue
-        raw = np.array([_score(c.name) for c in _level_node.children], dtype=np.float32)
+        raw = np.array([_score(c.name) for c in level_node.children], dtype=np.float32)
         proba = raw / raw.sum()
-        for _child, _p in zip(_level_node.children, proba, strict=True):
+        for child, p in zip(level_node.children, proba, strict=True):
             rows.append(
                 {
-                    "Parent": _level_node.name,
-                    "Category": _child.name,
-                    "Probability": f"{_p:.3f}",
-                    "Relative weight": "█" * max(1, round(_p * 20)),
+                    "Parent": level_node.name,
+                    "Category": child.name,
+                    "Probability": f"{p:.3f}",
+                    "Relative weight": "█" * max(1, round(p * 20)),
                 },
             )
 
