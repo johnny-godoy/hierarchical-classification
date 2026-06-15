@@ -378,6 +378,36 @@ Each run is appended to `.benchmarks/pathfinding_runs.jsonl` (git-ignored) and i
 - current git commit SHA
 - per-problem metrics for each algorithm (`optimality_pct`, `mean_ms`, `median_ms`)
 
+### Compare benchmark runs and pick the best one
+
+Use the comparison report to find the best run under this rule:
+
+- `main` optimality must stay at `100%` on every problem
+- among those runs, lower `main` runtime is better
+
+Run:
+
+```bash
+uv run benchmarks/pathfinding_compare.py
+```
+
+This prints:
+
+- how many runs were loaded
+- how many runs qualify under the optimality rule
+- the best qualifying run
+- a latest-vs-previous speed delta summary
+
+It also writes interactive HTML plots to `.benchmarks/reports/` by default.
+
+Useful options:
+
+```bash
+uv run benchmarks/pathfinding_compare.py --top 10
+uv run benchmarks/pathfinding_compare.py --plot-dir .benchmarks/custom-reports
+uv run benchmarks/pathfinding_compare.py --no-plots
+```
+
 ## Current Status
 
 This repository already includes tested integration coverage for:
