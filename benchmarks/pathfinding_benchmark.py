@@ -1,7 +1,5 @@
 """Benchmark path-finding quality and speed across traversal algorithms."""
 
-from __future__ import annotations
-
 import argparse
 import dataclasses
 import datetime as dt
@@ -9,9 +7,9 @@ import json
 import math
 import statistics
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from time import perf_counter
-from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
@@ -19,10 +17,6 @@ import numpy.typing as npt
 from src.classifier import HierarchicalClassifier
 from src.models import HierarchyNode, NodeClassifier
 from src.scoring import NegLogScoringStrategy
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
 
 DEFAULT_REPEATS = 12
 DEFAULT_OUTPUT = Path(".benchmarks/pathfinding_runs.jsonl")
@@ -61,7 +55,25 @@ class LookupNodeClassifier(NodeClassifier[str]):
         self._probability_tables = probability_tables
 
     def predict_proba(self, utterance: str, node: HierarchyNode[str]) -> npt.NDArray[np.float32]:
-        """Return probabilities for the current utterance and node."""
+        """Return probabilities for the current utterance and node.
+
+        Parameters
+        ----------
+        utterance : str
+            The input utterance for which to predict probabilities.
+        node : HierarchyNode[str]
+            The current node in the hierarchy for which to predict probabilities.
+
+        Returns
+        -------
+        npt.NDArray[np.float32]
+            Probabilities for the children of the given node.
+
+        Raises
+        ------
+        ValueError
+            If the probability table for the given utterance or node is missing.
+        """
         try:
             node_table = self._probability_tables[utterance]
             probabilities = node_table[node.name]
@@ -72,11 +84,26 @@ class LookupNodeClassifier(NodeClassifier[str]):
 
 
 def build_balanced_hierarchy(depth: int, branching_factor: int, prefix: str) -> HierarchyNode[str]:
-    """Build a balanced hierarchy with unique node names."""
+    """Build a balanced hierarchy with unique node names.
+
+    Parameters
+    ----------
+    depth : int
+        The number of levels in the hierarchy, including the root and leaf levels.
+    branching_factor : int
+        The number of children each internal node should have.
+    prefix : str
+        A string prefix to ensure unique node names across different hierarchies.
+
+    Returns
+    -------
+    HierarchyNode[str]
+        The root node of the constructed balanced hierarchy.
+    """
 
     def _build(level: int, path: tuple[int, ...]) -> HierarchyNode[str]:
         if level == depth:
-            return HierarchyNode(name=f"{prefix}/leaf/{'.'.join(map(str, path))}")
+            return HierarchyNode(name=f"{prefix}/leaf/{".".join(map(str, path))}")
 
         children = [_build(level + 1, (*path, index)) for index in range(branching_factor)]
         path_fragment = "root" if not path else ".".join(map(str, path))
@@ -86,7 +113,18 @@ def build_balanced_hierarchy(depth: int, branching_factor: int, prefix: str) -> 
 
 
 def iter_internal_nodes(root: HierarchyNode[str]) -> Iterable[HierarchyNode[str]]:
-    """Yield all internal nodes in depth-first order."""
+    """Yield all internal nodes in depth-first order.
+
+    Parameters
+    ----------
+    root : HierarchyNode[str]
+        The root node of the hierarchy to traverse.
+
+    Yields
+    ------
+    HierarchyNode[str]
+        Each internal node in the hierarchy, excluding leaf nodes.
+    """
     stack = [root]
     while stack:
         node = stack.pop()
@@ -102,7 +140,24 @@ def probability_vector(
     favored_child: int,
     favored_range: tuple[float, float],
 ) -> npt.NDArray[np.float32]:
-    """Create a normalized probability vector with one favored child."""
+    """Create a normalized probability vector with one favored child.
+
+    Parameters
+    ----------
+    rng : numpy.random.Generator
+        Random number generator used to sample the vector.
+    length : int
+        Number of children in the vector.
+    favored_child : int
+        Index of the child that should receive the highest weight.
+    favored_range : tuple[float, float]
+        Inclusive range used to sample the favored child weight before normalization.
+
+    Returns
+    -------
+    npt.NDArray[np.float32]
+        Normalized probability vector.
+    """
     lower_bound, upper_bound = favored_range
     favored_score = rng.uniform(lower_bound, upper_bound)
     noise = rng.uniform(NUMERIC_EPSILON, 0.15, size=length)
@@ -112,7 +167,20 @@ def probability_vector(
 
 
 def descendant_for_indices(root: HierarchyNode[str], indices: list[int]) -> HierarchyNode[str]:
-    """Follow child indices from root and return the reached node."""
+    """Follow child indices from root and return the reached node.
+
+    Parameters
+    ----------
+    root : HierarchyNode[str]
+        Root node to start from.
+    indices : list[int]
+        Child indices to follow in order.
+
+    Returns
+    -------
+    HierarchyNode[str]
+        Node reached after following the provided indices.
+    """
     current = root
     for child_index in indices:
         current = current.children[child_index]
@@ -125,8 +193,20 @@ def inject_deceptive_tables(
     depth: int,
     branching_factor: int,
 ) -> None:
-    """Inject a local-probability trap where greedy becomes suboptimal."""
-    if branching_factor < 2 or depth < 3:
+    """Inject a local-probability trap where greedy becomes suboptimal.
+
+    Parameters
+    ----------
+    hierarchy : HierarchyNode[str]
+        Hierarchy whose nodes should receive the deceptive probabilities.
+    utterance_nodes : dict[str, numpy.ndarray]
+        Probability tables for a single utterance.
+    depth : int
+        Hierarchy depth used to decide how far the trap extends.
+    branching_factor : int
+        Number of children at each internal node.
+    """
+    if branching_factor < 2 or depth < 3:  # noqa: PLR2004
         return
     denominator = branching_factor - 1
     if denominator <= 0:
@@ -167,7 +247,7 @@ def inject_deceptive_tables(
         optimal_indices.append(optimal_root_index)
 
 
-def create_problem(
+def create_problem(  # noqa: PLR0913, PLR0917
     name: str,
     depth: int,
     branching_factor: int,
@@ -175,7 +255,28 @@ def create_problem(
     deceptive_fraction: float,
     seed: int,
 ) -> BenchmarkProblem:
-    """Create one benchmark problem with deterministic synthetic probability tables."""
+    """Create one benchmark problem with deterministic synthetic probability tables.
+
+    Parameters
+    ----------
+    name : str
+        Problem name used for hierarchy and utterance identifiers.
+    depth : int
+        Hierarchy depth.
+    branching_factor : int
+        Number of children per internal node.
+    utterance_count : int
+        Number of synthetic utterances to generate.
+    deceptive_fraction : float
+        Fraction of utterances that should include deceptive probability tables.
+    seed : int
+        Random seed used to generate deterministic probability tables.
+
+    Returns
+    -------
+    BenchmarkProblem
+        Fully populated benchmark problem.
+    """
     hierarchy = build_balanced_hierarchy(depth=depth, branching_factor=branching_factor, prefix=name)
     rng = np.random.default_rng(seed)
     utterances = [f"{name}/sample/{index:04d}" for index in range(utterance_count)]
@@ -212,7 +313,13 @@ def create_problem(
 
 
 def create_problems() -> list[BenchmarkProblem]:
-    """Build realistic benchmark problems of increasing size and complexity."""
+    """Build realistic benchmark problems of increasing size and complexity.
+
+    Returns
+    -------
+    list[BenchmarkProblem]
+        Benchmark problems used by the suite.
+    """
     return [
         create_problem(
             name="support-routing-small",
@@ -250,7 +357,25 @@ def create_problems() -> list[BenchmarkProblem]:
 
 
 def find_path_to_leaf(root: HierarchyNode[str], leaf_name: str) -> list[HierarchyNode[str]]:
-    """Return the node path from root children to the target leaf."""
+    """Return the node path from root children to the target leaf.
+
+    Parameters
+    ----------
+    root : HierarchyNode[str]
+        Root node to search from.
+    leaf_name : str
+        Name of the target leaf node.
+
+    Returns
+    -------
+    list[HierarchyNode[str]]
+        Path from the root's children to the target leaf.
+
+    Raises
+    ------
+    ValueError
+        If the leaf does not exist in the hierarchy.
+    """
 
     def _search(node: HierarchyNode[str], path: list[HierarchyNode[str]]) -> list[HierarchyNode[str]] | None:
         if node.name == leaf_name and node.is_leaf:
@@ -276,7 +401,24 @@ def path_cost(
     utterance: str,
     leaf_name: str,
 ) -> float:
-    """Calculate negative-log path cost for a chosen leaf."""
+    """Calculate negative-log path cost for a chosen leaf.
+
+    Parameters
+    ----------
+    hierarchy : HierarchyNode[str]
+        Hierarchy used to resolve the target path.
+    classifier : NodeClassifier[str]
+        Classifier used to score the path.
+    utterance : str
+        Utterance being classified.
+    leaf_name : str
+        Target leaf name.
+
+    Returns
+    -------
+    float
+        Negative log cost of the target path, or ``math.inf`` when a probability is non-positive.
+    """
     target_path = find_path_to_leaf(root=hierarchy, leaf_name=leaf_name)
     current_node = hierarchy
     total_cost = 0.0
@@ -294,7 +436,27 @@ def path_cost(
 
 
 def greedy_classify(hierarchy: HierarchyNode[str], classifier: NodeClassifier[str], utterance: str) -> str:
-    """Classify by locally maximizing probability at each step."""
+    """Classify by locally maximizing probability at each step.
+
+    Parameters
+    ----------
+    hierarchy : HierarchyNode[str]
+        Hierarchy to traverse.
+    classifier : NodeClassifier[str]
+        Classifier used to score children.
+    utterance : str
+        Utterance being classified.
+
+    Returns
+    -------
+    str
+        Name of the selected leaf node.
+
+    Raises
+    ------
+    ValueError
+        If no valid leaf can be selected.
+    """
     current = hierarchy
     while not current.is_leaf:
         probabilities = classifier.predict_proba(utterance, current)
@@ -307,7 +469,27 @@ def greedy_classify(hierarchy: HierarchyNode[str], classifier: NodeClassifier[st
 
 
 def brute_force_classify(hierarchy: HierarchyNode[str], classifier: NodeClassifier[str], utterance: str) -> str:
-    """Classify by exhaustive path search over all leaf routes."""
+    """Classify by exhaustive path search over all leaf routes.
+
+    Parameters
+    ----------
+    hierarchy : HierarchyNode[str]
+        Hierarchy to traverse.
+    classifier : NodeClassifier[str]
+        Classifier used to score children.
+    utterance : str
+        Utterance being classified.
+
+    Returns
+    -------
+    str
+        Name of the best-scoring leaf node.
+
+    Raises
+    ------
+    ValueError
+        If no valid leaf can be selected.
+    """
     best_leaf: str | None = None
     best_cost = math.inf
 
@@ -336,7 +518,20 @@ def brute_force_classify(hierarchy: HierarchyNode[str], classifier: NodeClassifi
 
 
 def build_main_classifier(hierarchy: HierarchyNode[str], classifier: NodeClassifier[str]) -> HierarchicalClassifier:
-    """Build a reusable instance for the repository's main best-first algorithm."""
+    """Build a reusable instance for the repository's main best-first algorithm.
+
+    Parameters
+    ----------
+    hierarchy : HierarchyNode[str]
+        Hierarchy to classify against.
+    classifier : NodeClassifier[str]
+        Node classifier used by the scoring strategy.
+
+    Returns
+    -------
+    HierarchicalClassifier
+        Main classifier instance.
+    """
     scoring = NegLogScoringStrategy(classifier)
     return HierarchicalClassifier(scoring_strategy=scoring, hierarchy=hierarchy)
 
@@ -348,7 +543,31 @@ def run_timed_predictions(
     utterances: list[str],
     repeats: int,
 ) -> list[float]:
-    """Measure prediction times in milliseconds."""
+    """Measure prediction times in milliseconds.
+
+    Parameters
+    ----------
+    algorithm_name : str
+        Name of the algorithm to benchmark.
+    hierarchy : HierarchyNode[str]
+        Hierarchy used for classification.
+    classifier : NodeClassifier[str]
+        Classifier used by the benchmark.
+    utterances : list[str]
+        Utterances to classify.
+    repeats : int
+        Number of timing rounds to run.
+
+    Returns
+    -------
+    list[float]
+        Per-call durations in milliseconds.
+
+    Raises
+    ------
+    ValueError
+        If ``algorithm_name`` is not recognized.
+    """
     durations_ms: list[float] = []
     main_classifier: HierarchicalClassifier | None = None
     if algorithm_name == "main":
@@ -380,7 +599,29 @@ def compute_optimality(
     utterances: list[str],
     algorithm_name: str,
 ) -> float:
-    """Compute percent of utterances whose score matches brute-force optimal."""
+    """Compute percent of utterances whose score matches brute-force optimal.
+
+    Parameters
+    ----------
+    hierarchy : HierarchyNode[str]
+        Hierarchy used for classification.
+    classifier : NodeClassifier[str]
+        Classifier used by the benchmark.
+    utterances : list[str]
+        Utterances to evaluate.
+    algorithm_name : str
+        Name of the algorithm to compare.
+
+    Returns
+    -------
+    float
+        Percentage of utterances classified optimally.
+
+    Raises
+    ------
+    ValueError
+        If ``algorithm_name`` is not recognized.
+    """
     optimal_matches = 0
     main_classifier: HierarchicalClassifier | None = None
     if algorithm_name == "main":
@@ -427,7 +668,26 @@ def evaluate_algorithm(
     utterances: list[str],
     repeats: int,
 ) -> AlgorithmResult:
-    """Evaluate one algorithm and return optimality and runtime metrics."""
+    """Evaluate one algorithm and return optimality and runtime metrics.
+
+    Parameters
+    ----------
+    algorithm_name : str
+        Name of the algorithm to evaluate.
+    hierarchy : HierarchyNode[str]
+        Hierarchy used for classification.
+    classifier : NodeClassifier[str]
+        Classifier used by the benchmark.
+    utterances : list[str]
+        Utterances to evaluate.
+    repeats : int
+        Number of timing rounds to run.
+
+    Returns
+    -------
+    AlgorithmResult
+        Aggregated optimality and runtime metrics.
+    """
     optimality = compute_optimality(
         hierarchy=hierarchy,
         classifier=classifier,
@@ -450,7 +710,18 @@ def evaluate_algorithm(
 
 
 def resolve_git_commit(repo_root: Path) -> str:
-    """Resolve current git commit hash without shelling out."""
+    """Resolve current git commit hash without shelling out.
+
+    Parameters
+    ----------
+    repo_root : Path
+        Repository root directory.
+
+    Returns
+    -------
+    str
+        Current commit hash, or ``"unknown"`` when it cannot be resolved.
+    """
     git_dir = repo_root / ".git"
     head_file = git_dir / "HEAD"
     if not head_file.exists():
@@ -474,7 +745,7 @@ def resolve_git_commit(repo_root: Path) -> str:
         if not line or line.startswith(("#", "^")):
             continue
         line_parts = line.split(" ", maxsplit=1)
-        if len(line_parts) != 2:
+        if len(line_parts) != 2:  # noqa: PLR2004
             continue
         sha, reference = line_parts
         if reference == ref_path:
@@ -483,7 +754,18 @@ def resolve_git_commit(repo_root: Path) -> str:
 
 
 def run_suite(repeats: int) -> dict[str, dict[str, AlgorithmResult]]:
-    """Run the benchmark suite and return per-problem metrics."""
+    """Run the benchmark suite and return per-problem metrics.
+
+    Parameters
+    ----------
+    repeats : int
+        Number of timing rounds to run for each utterance.
+
+    Returns
+    -------
+    dict[str, dict[str, AlgorithmResult]]
+        Per-problem algorithm results.
+    """
     problems = create_problems()
     suite_results: dict[str, dict[str, AlgorithmResult]] = {}
 
@@ -521,7 +803,15 @@ def append_run(
     run_output_path: Path,
     run_payload: dict[str, str | int | SerializedProblemResults],
 ) -> None:
-    """Append run payload to a JSONL file."""
+    """Append run payload to a JSONL file.
+
+    Parameters
+    ----------
+    run_output_path : Path
+        File where the payload should be appended.
+    run_payload : dict[str, str | int | SerializedProblemResults]
+        Serialized benchmark run payload.
+    """
     run_output_path.parent.mkdir(parents=True, exist_ok=True)
     with run_output_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(run_payload))
@@ -531,7 +821,18 @@ def append_run(
 def serialize_results(
     suite_results: dict[str, dict[str, AlgorithmResult]],
 ) -> SerializedProblemResults:
-    """Convert dataclass suite results into plain JSON serializable dictionaries."""
+    """Convert dataclass suite results into plain JSON serializable dictionaries.
+
+    Parameters
+    ----------
+    suite_results : dict[str, dict[str, AlgorithmResult]]
+        Per-problem benchmark results.
+
+    Returns
+    -------
+    SerializedProblemResults
+        JSON-serializable representation of the results.
+    """
     serialized: dict[str, dict[str, dict[str, float]]] = {}
     for problem_name, algorithms in suite_results.items():
         serialized[problem_name] = {
@@ -546,7 +847,13 @@ def serialize_results(
 
 
 def print_summary(suite_results: dict[str, dict[str, AlgorithmResult]]) -> None:
-    """Print benchmark results in a compact table-like format."""
+    """Print benchmark results in a compact table-like format.
+
+    Parameters
+    ----------
+    suite_results : dict[str, dict[str, AlgorithmResult]]
+        Results to display.
+    """
     header = (
         "problem",
         "algorithm",
@@ -572,7 +879,13 @@ def print_summary(suite_results: dict[str, dict[str, AlgorithmResult]]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse CLI arguments for benchmark execution."""
+    """Parse CLI arguments for benchmark execution.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--repeats",
