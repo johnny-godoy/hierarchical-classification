@@ -53,6 +53,49 @@ class TestHierarchyNodeDefaults:
         assert node.examples == ["hello", "world"]
 
 
+class TestHierarchyNodeFromDict:
+    def test_reconstructs_nested_hierarchy(self) -> None:
+        data = {
+            "name": "root",
+            "children": [
+                {
+                    "name": "child",
+                    "children": [{"name": "grandchild", "examples": ["g1"]}],
+                    "examples": ["c1"],
+                },
+            ],
+            "examples": ["r1"],
+        }
+
+        node = HierarchyNode.from_dict(data)
+
+        assert node.name == "root"
+        assert node.examples == ["r1"]
+        assert node.children[0].name == "child"
+        assert node.children[0].examples == ["c1"]
+        assert node.children[0].children[0].name == "grandchild"
+
+    def test_missing_name_raises_key_error(self) -> None:
+        with pytest.raises(KeyError, match="missing required key 'name'"):
+            HierarchyNode.from_dict({"children": []})
+
+    def test_name_must_be_string(self) -> None:
+        with pytest.raises(TypeError, match=r"root\.name must be a string"):
+            HierarchyNode.from_dict({"name": 123})
+
+    def test_children_must_be_list(self) -> None:
+        with pytest.raises(TypeError, match=r"root\.children must be a list"):
+            HierarchyNode.from_dict({"name": "root", "children": "child"})
+
+    def test_examples_must_be_list(self) -> None:
+        with pytest.raises(TypeError, match=r"root\.examples must be a list"):
+            HierarchyNode.from_dict({"name": "root", "examples": "example"})
+
+    def test_child_must_be_mapping(self) -> None:
+        with pytest.raises(TypeError, match=r"root\.children\[0\] must be a mapping"):
+            HierarchyNode.from_dict({"name": "root", "children": ["not-a-dict"]})
+
+
 # ---------------------------------------------------------------------------
 # TraversedNode ordering
 # ---------------------------------------------------------------------------

@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Protocol, TypeVar
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, NotRequired, Protocol, TypedDict, TypeVar
 
 import attrs
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     import numpy as np
     import numpy.typing as npt
 
 T = TypeVar("T")
+
+
+class HierarchyNodeDict(TypedDict):
+    """Typed representation for serialized hierarchy nodes."""
+
+    name: str
+    children: NotRequired[list[HierarchyNodeDict]]
+    examples: NotRequired[list[object]]
 
 
 @attrs.define
@@ -30,7 +37,7 @@ class HierarchyNode[T]:
         return not self.children
 
     @staticmethod
-    def from_dict(data: Mapping) -> HierarchyNode:
+    def from_dict(data: Mapping[str, object], *, _path: str = "root") -> HierarchyNode:
         """Recursively reconstruct a HierarchyNode from a plain dict.
 
         Parameters
@@ -43,11 +50,44 @@ class HierarchyNode[T]:
         Returns
         -------
             A HierarchyNode instance reconstructed from the input dictionary.
+
+        Raises
+        ------
+        KeyError
+            If a required key is missing.
+        TypeError
+            If any node field has an invalid type.
         """
+        if "name" not in data:
+            msg = f"{_path} is missing required key 'name'."
+            raise KeyError(msg)
+
+        name = data["name"]
+        if not isinstance(name, str):
+            msg = f"{_path}.name must be a string, got {type(name).__name__}."
+            raise TypeError(msg)
+
+        children_data = data.get("children", [])
+        if not isinstance(children_data, Sequence) or isinstance(children_data, str):
+            msg = f"{_path}.children must be a list, got {type(children_data).__name__}."
+            raise TypeError(msg)
+
+        examples_data = data.get("examples", [])
+        if not isinstance(examples_data, Sequence) or isinstance(examples_data, str):
+            msg = f"{_path}.examples must be a list, got {type(examples_data).__name__}."
+            raise TypeError(msg)
+
+        children: list[HierarchyNode] = []
+        for index, child in enumerate(children_data):
+            if not isinstance(child, Mapping):
+                msg = f"{_path}.children[{index}] must be a mapping, got {type(child).__name__}."
+                raise TypeError(msg)
+            children.append(HierarchyNode.from_dict(child, _path=f"{_path}.children[{index}]"))
+
         return HierarchyNode(
-            name=data["name"],
-            children=[HierarchyNode.from_dict(c) for c in data.get("children", [])],
-            examples=data.get("examples", []),
+            name=name,
+            children=children,
+            examples=examples_data,
         )
 
 
