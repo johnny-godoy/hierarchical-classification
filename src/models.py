@@ -97,7 +97,6 @@ class TraversedNode[T]:
 
     cost: float
     node: HierarchyNode[T] = attrs.field(order=False)
-    path: list[HierarchyNode[T]] = attrs.field(factory=list, order=False)
 
 
 @attrs.define

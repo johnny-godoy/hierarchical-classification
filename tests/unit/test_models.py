@@ -117,10 +117,6 @@ class TestTraversedNodeOrdering:
         b = TraversedNode(cost=2.0, node=leaf_node)
         assert a > b
 
-    def test_path_defaults_empty(self, leaf_node: HierarchyNode) -> None:
-        t = TraversedNode(cost=0.0, node=leaf_node)
-        assert t.path == []
-
 
 # ---------------------------------------------------------------------------
 # ScoredNode
