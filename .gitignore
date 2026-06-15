@@ -11,3 +11,6 @@ wheels/
 
 # IDE specific
 .vscode/
+
+# Benchmark outputs
+.benchmarks/

@@ -138,6 +138,13 @@ select = ["ALL"]
     "PLR1711",
     "N803",
 ]
+"benchmarks/*" = [
+    "D",
+    "DOC",
+    "PLR0913",
+    "PLR0917",
+    "PLR2004",
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

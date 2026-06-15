@@ -356,6 +356,28 @@ To run a narrower slice:
 uv run pytest tests/integration/test_full_pipeline.py
 ```
 
+### Benchmark path-finding algorithms
+
+The repository includes a benchmark suite that compares:
+
+- the current best-first algorithm (`HierarchicalClassifier`)
+- a greedy local-choice traversal
+- a brute-force exhaustive traversal
+
+It evaluates both runtime and `%optimality` against brute-force on realistic synthetic hierarchies with increasing depth/size.
+
+Run it from the repository root:
+
+```bash
+python benchmarks/pathfinding_benchmark.py --repeats 12
+```
+
+Each run is appended to `.benchmarks/pathfinding_runs.jsonl` (git-ignored) and includes:
+
+- timestamp
+- current git commit SHA
+- per-problem metrics for each algorithm (`optimality_pct`, `mean_ms`, `median_ms`)
+
 ## Current Status
 
 This repository already includes tested integration coverage for:
