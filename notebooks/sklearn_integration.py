@@ -349,13 +349,13 @@ def _(hierarchy, mo, pipeline, utterance_input):
         class_to_prob: dict[str, float] = dict(zip(pipeline.classes_, all_proba, strict=True))
 
         rows = []
-        for top in hierarchy.children:
-            for leaf in top.children:
-                p = class_to_prob.get(leaf.name, 0.0)
+        for _top in hierarchy.children:
+            for _leaf in _top.children:
+                p = class_to_prob.get(_leaf.name, 0.0)
                 rows.append(
                     {
-                        "Top-level": top.name,
-                        "Leaf category": leaf.name,
+                        "Top-level": _top.name,
+                        "Leaf category": _leaf.name,
                         "Probability": f"{p:.4f}",
                         "Relative weight": "█" * max(1, round(p * 30)),
                     },
